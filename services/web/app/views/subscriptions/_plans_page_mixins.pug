@@ -167,17 +167,16 @@ mixin currency_dropdown
 mixin plan_switch(location)
 	ul.nav.nav-pills
 		li(ng-class="{'active': ui.view == 'monthly'}")
-			a.btn.btn-default-outline(
-				href="#"
+			button.btn-default-outline(
 				ng-click="switchToMonthly($event,'" + location + "')"
 			) #{translate("monthly")}
 		li(ng-class="{'active': ui.view == 'annual'}")
-			a.btn.btn-default-outline(
+			button.btn-default-outline(
 				href="#"
 				ng-click="switchToAnnual($event,'" + location + "')"
 			) #{translate("annual")}
 		li(ng-class="{'active': ui.view == 'student'}")
-			a.btn.btn-default-outline(
+			button.btn-default-outline(
 				href="#"
 				ng-click="switchToStudent($event,'" + location + "')"
 			) #{translate("special_price_student")}
@@ -207,10 +206,7 @@ mixin allCardsAndControls(controlsRowSpaced, listLocation)
 							.best-value
 								strong #{translate('best_value')}
 							.card-header
-								if (useNewPlanName)
-									h2 #{translate("standard")}
-								else
-									h2 #{translate("collaborator")}
+								h2 #{translate("standard")}
 							h5.tagline #{translate("tagline_collaborator")}
 							.circle
 								+price_collaborator
