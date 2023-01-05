@@ -22,5 +22,5 @@ jobs:
           context: ../
           push: true
           tags: shell20021020/sharelatex-base:latest
-          cache-from: type=registry,ref=sharelatex/sharelatex-base
+          cache-from: type=registry,ref=shell20021020/sharelatex-base
           file: server-ce/Dockerfile-base
