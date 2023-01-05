@@ -67,10 +67,9 @@ RUN mkdir /install-tl-unx \
       texcount \
       synctex \
     \
-&&  tlmgr install --repository ${TEXLIVE_MIRROR} scheme-full \
 &&  tlmgr path add \
 &&  rm -rf /install-tl-unx
-
+RUN tlmgr install --repository ${TEXLIVE_MIRROR} scheme-full
 
 # Set up sharelatex user and home directory
 # -----------------------------------------
