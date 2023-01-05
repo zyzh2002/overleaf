@@ -14,7 +14,7 @@ ENV REBUILT_AFTER="2022-12-12"
 
 # Install dependencies
 # --------------------
-RUN sed -i 's@//.*archive.ubuntu.com@//mirrors.ustc.edu.cn@g' /etc/apt/sources.list && sed -i 's/security.ubuntu.com/mirrors.ustc.edu.cn/g' /etc/apt/sources.list
+#RUN sed -i 's@//.*archive.ubuntu.com@//mirrors.ustc.edu.cn@g' /etc/apt/sources.list && sed -i 's/security.ubuntu.com/mirrors.ustc.edu.cn/g' /etc/apt/sources.list
 RUN apt-get update \
 &&  apt-get install -y \
       build-essential wget net-tools unzip time imagemagick optipng strace nginx git python zlib1g-dev libpcre3-dev gettext-base libwww-perl \
@@ -37,9 +37,9 @@ RUN apt-get update \
 # different server, for example https://ctan.crest.fr
 #
 # # docker build \
-#     --build-arg TEXLIVE_MIRROR=https://mirrors.aliyun.com/CTAN/systems/texlive/tlnet \
+#     --build-arg TEXLIVE_MIRROR=https://mirrors.ustc.edu.cn/CTAN/systems/texlive/tlnet \
 #     -f Dockerfile-base -t sharelatex/sharelatex-base .
-ARG TEXLIVE_MIRROR=https://mirrors.ustc.edu.cn/CTAN/systems/texlive/tlnet
+ARG TEXLIVE_MIRROR=https://mirror.ox.ac.uk/sites/ctan.org/systems/texlive/tlnet
 
 RUN mkdir /install-tl-unx \
 &&  wget --quiet https://tug.org/texlive/files/texlive.asc \
