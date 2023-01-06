@@ -24,7 +24,7 @@ jobs:
           context: ../
           push: true
           tags: shell20021020/sharelatex:latest
-          cache-from: type=registry,ref=shell20021020/sharelatex-base:cache
-          cache-to: type=registry,mode=max,ref=shell20021020/sharelatex-base:cache
+          cache-from: type=registry,ref=shell20021020/sharelatex:cache
+          cache-to: type=registry,mode=max,ref=shell20021020/sharelatex:cache
           file: server-ce/Dockerfile
           build-args: SHARELATEX_BASE_TAG MONOREPO_REVISION
