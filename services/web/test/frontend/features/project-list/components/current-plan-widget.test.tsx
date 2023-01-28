@@ -52,6 +52,9 @@ describe('<CurrentPlanWidget />', function () {
       expect(sendMBSpy).to.be.calledOnce
       expect(sendMBSpy).calledWith('upgrade-button-click', {
         source: 'dashboard-top',
+        page: '/',
+        'project-dashboard-react': 'enabled',
+        'is-dashboard-sidebar-hidden': false,
       })
     })
   })
@@ -242,5 +245,86 @@ describe('<CurrentPlanWidget />', function () {
         screen.getByRole('tooltip', { name: paidPlanTooltipMessage })
       })
     })
+  })
+
+  describe('features page split test', function () {
+    let sendMBSpy: sinon.SinonSpy
+
+    const variants = [
+      { name: 'default', link: '/learn/how-to/Overleaf_premium_features' },
+      { name: 'new', link: '/about/features-overview' },
+    ]
+
+    const plans = [
+      { type: 'free' },
+      {
+        type: 'individual',
+        plan: {
+          name: 'Abc',
+        },
+      },
+      {
+        type: 'group',
+        plan: {
+          name: 'Abc',
+        },
+        subscription: {
+          teamName: 'Example Team',
+          name: 'Example Name',
+        },
+      },
+      {
+        type: 'commons',
+        plan: {
+          name: 'Abc',
+        },
+        subscription: {
+          name: 'Example Name',
+        },
+      },
+    ]
+
+    beforeEach(function () {
+      sendMBSpy = sinon.spy(eventTracking, 'sendMB')
+    })
+
+    afterEach(function () {
+      sendMBSpy.restore()
+    })
+
+    for (const variant of variants) {
+      describe(`${variant.name} variant`, function () {
+        beforeEach(function () {
+          window.metaAttributesCache.set('ol-splitTestVariants', {
+            'features-page': variant.name,
+          })
+        })
+        afterEach(function () {
+          window.metaAttributesCache.delete('ol-splitTestVariants')
+        })
+
+        for (const plan of plans) {
+          it(`links to ${variant.name} features page on ${plan.type} plan and sends analytics event`, function () {
+            window.metaAttributesCache.set('ol-usersBestSubscription', {
+              ...plan,
+            })
+            render(<CurrentPlanWidget />)
+
+            const links = screen.getAllByRole('link')
+            expect(links[0].getAttribute('href')).to.equal(variant.link)
+
+            fireEvent.click(links[0])
+            expect(sendMBSpy).to.be.calledOnce
+            expect(sendMBSpy).calledWith('features-page-link', {
+              splitTest: 'features-page',
+              splitTestVariant: variant.name,
+              page: '/',
+            })
+
+            window.metaAttributesCache.delete('ol-usersBestSubscription')
+          })
+        }
+      })
+    }
   })
 })

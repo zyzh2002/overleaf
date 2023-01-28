@@ -1,16 +1,32 @@
 import { useTranslation, Trans } from 'react-i18next'
 import { Button } from 'react-bootstrap'
+import { FreePlanSubscription } from '../../../../../../types/project/dashboard/subscription'
 import Tooltip from '../../../../shared/components/tooltip'
 import * as eventTracking from '../../../../infrastructure/event-tracking'
+import getMeta from '../../../../utils/meta'
 
-function FreePlan() {
+type FreePlanProps = Pick<FreePlanSubscription, 'featuresPageURL'>
+
+function FreePlan({ featuresPageURL }: FreePlanProps) {
   const { t } = useTranslation()
   const currentPlanLabel = (
     <Trans i18nKey="free_plan_label" components={{ b: <strong /> }} />
   )
 
   const handleClick = () => {
-    eventTracking.sendMB('upgrade-button-click', { source: 'dashboard-top' })
+    eventTracking.sendMB('upgrade-button-click', {
+      source: 'dashboard-top',
+      'project-dashboard-react': 'enabled',
+      'is-dashboard-sidebar-hidden': false,
+    })
+  }
+
+  const featuresPageVariant = getMeta('ol-splitTestVariants')?.['features-page']
+  function handleLinkClick() {
+    eventTracking.sendMB('features-page-link', {
+      splitTest: 'features-page',
+      splitTestVariant: featuresPageVariant,
+    })
   }
 
   return (
@@ -22,8 +38,9 @@ function FreePlan() {
         overlayProps={{ placement: 'bottom' }}
       >
         <a
-          href="/learn/how-to/Overleaf_premium_features"
+          href={featuresPageURL}
           className="current-plan-label hidden-xs"
+          onClick={handleLinkClick}
         >
           {currentPlanLabel} <span className="info-badge" />
         </a>

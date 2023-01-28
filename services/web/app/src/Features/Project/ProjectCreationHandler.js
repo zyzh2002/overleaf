@@ -158,7 +158,9 @@ async function _createBlankProject(
   attributes.name = projectName
   const project = new Project(attributes)
 
-  if (project.overleaf.history.id == null) {
+  // Initialise the history unless the caller has overridden it in the attributes
+  // (to allow scripted creation of projects without full project history)
+  if (project.overleaf.history.id == null && !attributes.overleaf) {
     const historyId = await HistoryManager.promises.initializeProject(
       project._id
     )
@@ -171,7 +173,6 @@ async function _createBlankProject(
   // (to allow scripted creation of projects without full project history)
   const historyId = project.overleaf.history.id
   if (
-    Features.hasFeature('history-v1') &&
     Settings.apis.project_history.displayHistoryForNewProjects &&
     historyId != null
   ) {

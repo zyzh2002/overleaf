@@ -432,6 +432,12 @@ lint: lint_locales
 lint_locales:
 	bin/lint_locales
 
+sort_locales:
+	 node scripts/translations/sort.js
+
+cleanup_unused_locales:
+	 node scripts/translations/cleanupUnusedLocales.js
+
 lint: lint_flag_res_send_usage
 lint_flag_res_send_usage:
 	bin/lint_flag_res_send_usage

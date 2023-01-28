@@ -46,6 +46,11 @@ ADD server-ce/nginx/clsi-nginx.conf /etc/nginx/sites-enabled/clsi-nginx.conf
 ADD server-ce/logrotate/sharelatex /etc/logrotate.d/sharelatex
 RUN chmod 644 /etc/logrotate.d/sharelatex
 
+# Configure cron tasks
+# ----------------------
+ADD server-ce/cron /overleaf/cron
+ADD server-ce/config/crontab* /etc/cron.d
+
 
 # Copy Phusion Image startup scripts to its location
 # --------------------------------------------------
@@ -53,7 +58,11 @@ COPY server-ce/init_scripts/ /etc/my_init.d/
 
 # Copy app settings files
 # -----------------------
-COPY server-ce/settings.js /etc/sharelatex/settings.js
+COPY server-ce/config/settings.js /etc/sharelatex/settings.js
+
+# Copy history-v1 files
+# -----------------------
+COPY server-ce/config/production.json /overleaf/services/history-v1/config/production.json
 
 # Copy grunt thin wrapper
 # -----------------------

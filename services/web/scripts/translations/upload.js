@@ -35,14 +35,27 @@ async function pollUploadStatus(importId) {
     await sleep(5000)
   }
   if (task.status === 'failed') {
-    console.error({ task })
+    console.error(JSON.stringify({ task }, null, 2))
     throw new Error('upload failed')
   }
 }
 
-async function main() {
+async function uploadOnce() {
   const importId = await uploadLocales()
   await pollUploadStatus(importId)
+}
+
+async function main() {
+  try {
+    await uploadOnce()
+  } catch (err) {
+    console.error('--- upload failed once ---')
+    console.error(err)
+    console.error('--- upload failed once ---')
+    console.log('retrying upload in 30s')
+    await sleep(30_000)
+    await uploadOnce()
+  }
 }
 
 main().catch(error => {

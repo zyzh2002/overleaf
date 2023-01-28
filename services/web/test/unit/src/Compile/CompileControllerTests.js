@@ -62,6 +62,11 @@ describe('CompileController', function () {
           getAssignment: (this.getAssignment = sinon.stub().yields(null, {
             variant: 'default',
           })),
+          promises: {
+            getAssignment: sinon.stub().resolves({
+              variant: 'default',
+            }),
+          },
         },
         '../Analytics/AnalyticsManager': {
           recordEventForSession: sinon.stub(),
@@ -116,6 +121,7 @@ describe('CompileController', function () {
                 },
               ],
               pdfDownloadDomain: 'https://compiles.overleaf.test',
+              enableHybridPdfDownload: false,
             })
           )
         })
@@ -158,6 +164,7 @@ describe('CompileController', function () {
                 },
               ],
               pdfDownloadDomain: 'https://compiles.overleaf.test/zone/b',
+              enableHybridPdfDownload: false,
             })
           )
         })
@@ -199,6 +206,7 @@ describe('CompileController', function () {
           JSON.stringify({
             status: this.status,
             outputFiles: this.outputFiles,
+            enableHybridPdfDownload: false,
           })
         )
       })

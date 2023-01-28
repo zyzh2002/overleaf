@@ -1,16 +1,17 @@
 import OError from '@overleaf/o-error'
+import { fetchFromCompileDomain } from './fetchFromCompileDomain'
 
 const PDF_JS_CHUNK_SIZE = 128 * 1024
 const MAX_SUB_REQUEST_COUNT = 4
 const MAX_SUB_REQUEST_BYTES = 4 * PDF_JS_CHUNK_SIZE
 const SAMPLE_NGINX_BOUNDARY = '00000000000000000001'
-const HEADER_OVERHEAD_PER_MULTI_PART_CHUNK = composeMultipartHeader({
+export const HEADER_OVERHEAD_PER_MULTI_PART_CHUNK = composeMultipartHeader({
   boundary: SAMPLE_NGINX_BOUNDARY,
   // Assume an upper bound of O(9GB) for the pdf size.
   start: 9 * 1024 * 1024 * 1024,
   end: 9 * 1024 * 1024 * 1024,
   size: 9 * 1024 * 1024 * 1024,
-})
+}).length
 const MULTI_PART_THRESHOLD = 4
 const INCREMENTAL_CACHE_SIZE = 1000
 // Download large chunks once the shard bandwidth exceeds 50% of their size.
@@ -73,7 +74,7 @@ function preprocessFileOnce({ file, usageScore, cachedUrls }) {
 /**
  * @param {Array} chunks
  */
-function estimateSizeOfMultipartResponse(chunks) {
+export function estimateSizeOfMultipartResponse(chunks) {
   /*
   --boundary
   HEADER
@@ -88,7 +89,8 @@ function estimateSizeOfMultipartResponse(chunks) {
       (totalBytes, chunk) =>
         totalBytes +
         HEADER_OVERHEAD_PER_MULTI_PART_CHUNK +
-        (chunk.end - chunk.start)
+        (chunk.end - chunk.start),
+      0
     ) + ('\r\n' + SAMPLE_NGINX_BOUNDARY + '--').length
   )
 }
@@ -356,7 +358,7 @@ function getResponseSize(response) {
  * @param {Response} response
  * @param chunk
  */
-function getMultipartBoundary(response, chunk) {
+export function getMultipartBoundary(response, chunk) {
   if (!Array.isArray(chunk)) return ''
 
   const raw = response.headers.get('Content-Type')
@@ -391,7 +393,13 @@ function composeMultipartHeader({ boundary, start, end, size }) {
  * @param {string} boundary
  * @param {Object} metrics
  */
-function resolveMultiPartResponses({ file, chunks, data, boundary, metrics }) {
+export function resolveMultiPartResponses({
+  file,
+  chunks,
+  data,
+  boundary,
+  metrics,
+}) {
   const responses = []
   let offsetStart = 0
   const encoder = new TextEncoder()
@@ -438,7 +446,7 @@ function resolveMultiPartResponses({ file, chunks, data, boundary, metrics }) {
  * @param {number} estimatedSize
  * @param {RequestInit} init
  */
-function checkChunkResponse(response, estimatedSize, init) {
+export function checkChunkResponse(response, estimatedSize, init) {
   if (!(response.status === 206 || response.status === 200)) {
     throw new OError('non successful response status: ' + response.status, {
       responseHeaders: Object.fromEntries(response.headers.entries()),
@@ -476,7 +484,7 @@ export async function fallbackRequest({ url, start, end, abortSignal }) {
       headers: { Range: `bytes=${start}-${end - 1}` },
       signal: abortSignal,
     }
-    const response = await fetch(url, init)
+    const response = await fetchFromCompileDomain(url, init)
     checkChunkResponse(response, end - start, init)
     return await response.arrayBuffer()
   } catch (e) {
@@ -555,7 +563,7 @@ async function fetchChunk({
     //  result all the browser cache keys (aka urls) get invalidated.
     // We memorize the previous browser cache keys in `cachedUrls`.
     try {
-      const response = await fetch(oldUrl, init)
+      const response = await fetchFromCompileDomain(oldUrl, init)
       if (response.status === 200) {
         checkChunkResponse(response, estimatedSize, init)
         metrics.oldUrlHitCount += 1
@@ -570,7 +578,7 @@ async function fetchChunk({
       // Fallback to the latest url.
     }
   }
-  const response = await fetch(url, init)
+  const response = await fetchFromCompileDomain(url, init)
   checkChunkResponse(response, estimatedSize, init)
   if (chunk.hash) cachedUrls.set(chunk.hash, url)
   return response

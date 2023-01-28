@@ -1,12 +1,7 @@
 import { useEffect } from 'react'
 import useDetachState from './use-detach-state'
 
-export default function useDetachStateWatcher(
-  key,
-  stateValue,
-  senderRole,
-  targetRole
-) {
+function useDetachStateWatcher(key, stateValue, senderRole, targetRole) {
   const [value, setValue] = useDetachState(
     key,
     stateValue,
@@ -20,3 +15,5 @@ export default function useDetachStateWatcher(
 
   return [value, setValue]
 }
+
+export default useDetachStateWatcher

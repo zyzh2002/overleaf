@@ -69,6 +69,8 @@ import './features/source-editor/controllers/grammarly-warning-controller'
 import { cleanupServiceWorker } from './utils/service-worker-cleanup'
 import { reportCM6Perf } from './infrastructure/cm6-performance'
 import { reportAcePerf } from './ide/editor/ace-performance'
+import { scheduleUserContentDomainAccessCheck } from './features/user-content-domain-access-check'
+import isSplitTestEnabled from './utils/isSplitTestEnabled'
 
 App.controller(
   'IdeController',
@@ -266,7 +268,7 @@ If the project has been renamed please look in your project list for a new proje
           editorType,
         }
 
-        if (editorType === 'cm6') {
+        if (editorType === 'cm6' || editorType === 'cm6-rich-text') {
           const cm6PerfData = reportCM6Perf()
 
           // Ignore if no typing has happened
@@ -479,6 +481,9 @@ If the project has been renamed please look in your project list for a new proje
 )
 
 cleanupServiceWorker()
+if (isSplitTestEnabled('user-content-domain-access-check')) {
+  scheduleUserContentDomainAccessCheck()
+}
 
 angular.module('SharelatexApp').config(function ($provide) {
   $provide.decorator('$browser', [

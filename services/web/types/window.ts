@@ -1,5 +1,6 @@
 import { ExposedSettings } from './exposed-settings'
 import { OAuthProviders } from './oauth-providers'
+import { OverallThemeMeta } from './project-settings'
 import { User } from './user'
 
 declare global {
@@ -28,8 +29,8 @@ declare global {
     isRestrictedTokenMember: boolean
     _reportCM6Perf: () => void
     _reportAcePerf: () => void
-    MathJax: {
-      Hub: Record<string, any>
-    }
+    MathJax: Record<string, any>
+    overallThemes: OverallThemeMeta[]
+    recurly?: object
   }
 }

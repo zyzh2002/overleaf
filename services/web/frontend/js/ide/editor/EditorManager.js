@@ -24,8 +24,6 @@ import './controllers/SwitchToPDFButton'
 import getMeta from '../../utils/meta'
 import { hasSeenCM6SwitchAwaySurvey } from '../../features/source-editor/utils/switch-away-survey'
 
-const params = new URLSearchParams(window.location.search)
-
 let EditorManager
 
 export default EditorManager = (function () {
@@ -164,11 +162,18 @@ export default EditorManager = (function () {
       if (!this.$scope.editor.sharejs_doc) {
         return null
       }
-      return this.$scope.editor.sharejs_doc.editorType()
+
+      let editorType = this.$scope.editor.sharejs_doc.editorType()
+
+      if (editorType === 'cm6' && this.$scope.editor.showVisual) {
+        editorType = 'cm6-rich-text'
+      }
+
+      return editorType
     }
 
     showRichText() {
-      if (params.has('cm_visual')) {
+      if (getMeta('ol-richTextVariant') === 'cm6') {
         return false
       }
 
@@ -179,20 +184,20 @@ export default EditorManager = (function () {
     }
 
     showVisual() {
-      if (!params.has('cm_visual')) {
+      if (getMeta('ol-richTextVariant') !== 'cm6') {
         return false
       }
 
       return (
-        this.localStorage(`editor.visual-mode.${this.$scope.project_id}`) ===
-        'visual'
+        this.localStorage(`editor.mode.${this.$scope.project_id}`) ===
+        'rich-text'
       )
     }
 
     newSourceEditor() {
-      // only use the new source editor if the option to switch is available
-      if (!getMeta('ol-showNewSourceEditorOption')) {
-        return false
+      // Use the new source editor if the legacy editor is disabled
+      if (!getMeta('ol-showLegacySourceEditor')) {
+        return true
       }
 
       const storedPrefIsCM6 = () => {

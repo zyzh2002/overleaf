@@ -3,6 +3,8 @@ import HumanReadableLogs from '../../../ide/human-readable-logs/HumanReadableLog
 import BibLogParser from '../../../ide/log-parser/bib-log-parser'
 import { v4 as uuid } from 'uuid'
 import { enablePdfCaching } from './pdf-caching-flags'
+import { fetchFromCompileDomain, swapDomain } from './fetchFromCompileDomain'
+import { userContentDomainAccessCheckPassed } from '../../user-content-domain-access-check'
 
 // Warnings that may disappear after a second LaTeX pass
 const TRANSIENT_WARNING_REGEX = /^(Reference|Citation).+undefined on input line/
@@ -27,7 +29,8 @@ export function handleOutputFiles(outputFiles, projectId, data) {
 
   outputFile.pdfUrl = `${buildURL(
     outputFile,
-    data.pdfDownloadDomain
+    data.pdfDownloadDomain,
+    data.enableHybridPdfDownload
   )}?${params}`
 
   // build the URL for downloading the PDF
@@ -69,9 +72,10 @@ export const handleLogFiles = async (outputFiles, data, signal) => {
 
   if (logFile) {
     try {
-      const response = await fetch(buildURL(logFile, data.pdfDownloadDomain), {
-        signal,
-      })
+      const response = await fetchFromCompileDomain(
+        buildURL(logFile, data.pdfDownloadDomain, data.enableHybridPdfDownload),
+        { signal }
+      )
 
       result.log = await response.text()
 
@@ -99,9 +103,10 @@ export const handleLogFiles = async (outputFiles, data, signal) => {
 
   if (blgFile) {
     try {
-      const response = await fetch(buildURL(blgFile, data.pdfDownloadDomain), {
-        signal,
-      })
+      const response = await fetchFromCompileDomain(
+        buildURL(blgFile, data.pdfDownloadDomain, data.enableHybridPdfDownload),
+        { signal }
+      )
 
       const log = await response.text()
 
@@ -156,14 +161,27 @@ export function buildLogEntryAnnotations(entries, fileTreeManager) {
   return logEntryAnnotations
 }
 
-function buildURL(file, pdfDownloadDomain) {
+function buildURL(file, pdfDownloadDomain, enableHybridPdfDownload) {
+  const userContentDomain = getMeta('ol-compilesUserContentDomain')
+  if (
+    enableHybridPdfDownload &&
+    userContentDomainAccessCheckPassed() &&
+    file.build &&
+    userContentDomain
+  ) {
+    // This user is enrolled in the hybrid download of compile output.
+    // The access check passed, so try to use the new user content domain.
+    // Downloads from the compiles domains must include a build id.
+    // The build id is used implicitly for access control.
+    return swapDomain(`${pdfDownloadDomain}${file.url}`, userContentDomain)
+  }
   if (file.build && pdfDownloadDomain) {
     // Downloads from the compiles domain must include a build id.
     // The build id is used implicitly for access control.
     return `${pdfDownloadDomain}${file.url}`
   }
   // Go through web instead, which uses mongo for checking project access.
-  return file.url
+  return `${window.origin}${file.url}`
 }
 
 function normalizeFilePath(path, rootDocDirname) {

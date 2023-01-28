@@ -38,7 +38,7 @@ export default function SettingsDocument() {
       value={rootDocId}
       options={validDocsOptions}
       label={t('main_document')}
-      name="rootDoc_id"
+      name="rootDocId"
     />
   )
 }

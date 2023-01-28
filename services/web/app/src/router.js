@@ -35,6 +35,7 @@ const PasswordResetRouter = require('./Features/PasswordReset/PasswordResetRoute
 const StaticPagesRouter = require('./Features/StaticPages/StaticPagesRouter')
 const ChatController = require('./Features/Chat/ChatController')
 const Modules = require('./infrastructure/Modules')
+const { RateLimiter } = require('./infrastructure/RateLimiter')
 const RateLimiterMiddleware = require('./Features/Security/RateLimiterMiddleware')
 const InactiveProjectController = require('./Features/InactiveData/InactiveProjectController')
 const ContactRouter = require('./Features/Contacts/ContactRouter')
@@ -65,8 +66,147 @@ const _ = require('underscore')
 const { expressify } = require('./util/promises')
 const { plainTextResponse } = require('./infrastructure/Response')
 const PublicAccessLevels = require('./Features/Authorization/PublicAccessLevels')
+const UserContentDomainController = require('./Features/UserContentDomainCheck/UserContentDomainController')
 
 module.exports = { initialize }
+
+const rateLimiters = {
+  addEmail: new RateLimiter('add-email', {
+    points: 10,
+    duration: 60,
+  }),
+  addProjectToTag: new RateLimiter('add-project-to-tag', {
+    points: 30,
+    duration: 60,
+  }),
+  addProjectsToTag: new RateLimiter('add-projects-to-tag', {
+    points: 30,
+    duration: 60,
+  }),
+  canSkipCaptcha: new RateLimiter('can-skip-captcha', {
+    points: 20,
+    duration: 60,
+  }),
+  changePassword: new RateLimiter('change-password', {
+    points: 10,
+    duration: 60,
+  }),
+  compileProjectHttp: new RateLimiter('compile-project-http', {
+    points: 800,
+    duration: 60 * 60,
+  }),
+  confirmEmail: new RateLimiter('confirm-email', {
+    points: 10,
+    duration: 60,
+  }),
+  confirmUniversityDomain: new RateLimiter('confirm-university-domain', {
+    points: 1,
+    duration: 60,
+  }),
+  createProject: new RateLimiter('create-project', {
+    points: 20,
+    duration: 60,
+  }),
+  createTag: new RateLimiter('create-tag', {
+    points: 30,
+    duration: 60,
+  }),
+  deleteEmail: new RateLimiter('delete-email', {
+    points: 10,
+    duration: 60,
+  }),
+  deleteTag: new RateLimiter('delete-tag', {
+    points: 30,
+    duration: 60,
+  }),
+  deleteUser: new RateLimiter('delete-user', {
+    points: 10,
+    duration: 60,
+  }),
+  downloadProjectRevision: new RateLimiter('download-project-revision', {
+    points: 30,
+    duration: 60 * 60,
+  }),
+  endorseEmail: new RateLimiter('endorse-email', {
+    points: 30,
+    duration: 60,
+  }),
+  getProjects: new RateLimiter('get-projects', {
+    points: 30,
+    duration: 60,
+  }),
+  grantTokenAccessReadOnly: new RateLimiter('grant-token-access-read-only', {
+    points: 10,
+    duration: 60,
+  }),
+  grantTokenAccessReadWrite: new RateLimiter('grant-token-access-read-write', {
+    points: 10,
+    duration: 60,
+  }),
+  indexAllProjectReferences: new RateLimiter('index-all-project-references', {
+    points: 30,
+    duration: 60,
+  }),
+  indexProjectReferences: new RateLimiter('index-project-references', {
+    points: 30,
+    duration: 60,
+  }),
+  miscOutputDownload: new RateLimiter('misc-output-download', {
+    points: 1000,
+    duration: 60 * 60,
+  }),
+  multipleProjectsZipDownload: new RateLimiter(
+    'multiple-projects-zip-download',
+    {
+      points: 10,
+      duration: 60,
+    }
+  ),
+  openDashboard: new RateLimiter('open-dashboard', {
+    points: 30,
+    duration: 60,
+  }),
+  openProject: new RateLimiter('open-project', {
+    points: 15,
+    duration: 60,
+  }),
+  readAndWriteToken: new RateLimiter('read-and-write-token', {
+    points: 15,
+    duration: 60,
+  }),
+  readOnlyToken: new RateLimiter('read-only-token', {
+    points: 15,
+    duration: 60,
+  }),
+  removeProjectFromTag: new RateLimiter('remove-project-from-tag', {
+    points: 30,
+    duration: 60,
+  }),
+  removeProjectsFromTag: new RateLimiter('remove-projects-from-tag', {
+    points: 30,
+    duration: 60,
+  }),
+  renameTag: new RateLimiter('rename-tag', {
+    points: 30,
+    duration: 60,
+  }),
+  resendConfirmation: new RateLimiter('resend-confirmation', {
+    points: 10,
+    duration: 60,
+  }),
+  sendChatMessage: new RateLimiter('send-chat-message', {
+    points: 100,
+    duration: 60,
+  }),
+  statusCompiler: new RateLimiter('status-compiler', {
+    points: 10,
+    duration: 60,
+  }),
+  zipDownload: new RateLimiter('zip-download', {
+    points: 10,
+    duration: 60,
+  }),
+}
 
 function initialize(webRouter, privateApiRouter, publicApiRouter) {
   webRouter.use(unsupportedBrowserMiddleware)
@@ -91,11 +231,7 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
   webRouter.post(
     '/login/can-skip-captcha',
     // Keep in sync with the overleaf-login options.
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'can-skip-captcha',
-      maxRequests: 20,
-      timeInterval: 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.canSkipCaptcha),
     CaptchaMiddleware.canSkipCaptcha
   )
 
@@ -174,11 +310,7 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
   webRouter.post(
     '/user/password/update',
     AuthenticationController.requireLogin(),
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'change-password',
-      maxRequests: 10,
-      timeInterval: 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.changePassword),
     UserController.changePassword
   )
   webRouter.get(
@@ -190,21 +322,13 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
   webRouter.get('/user/emails/confirm', UserEmailsController.showConfirm)
   webRouter.post(
     '/user/emails/confirm',
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'confirm-email',
-      maxRequests: 10,
-      timeInterval: 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.confirmEmail),
     UserEmailsController.confirm
   )
   webRouter.post(
     '/user/emails/resend_confirmation',
     AuthenticationController.requireLogin(),
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'resend-confirmation',
-      maxRequests: 10,
-      timeInterval: 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.resendConfirmation),
     UserEmailsController.resendConfirmation
   )
 
@@ -224,21 +348,13 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
     webRouter.post(
       '/user/emails',
       AuthenticationController.requireLogin(),
-      RateLimiterMiddleware.rateLimit({
-        endpointName: 'add-email',
-        maxRequests: 10,
-        timeInterval: 60,
-      }),
+      RateLimiterMiddleware.rateLimitV2(rateLimiters.addEmail),
       UserEmailsController.add
     )
     webRouter.post(
       '/user/emails/delete',
       AuthenticationController.requireLogin(),
-      RateLimiterMiddleware.rateLimit({
-        endpointName: 'delete-email',
-        maxRequests: 10,
-        timeInterval: 60,
-      }),
+      RateLimiterMiddleware.rateLimitV2(rateLimiters.deleteEmail),
       UserEmailsController.remove
     )
     webRouter.post(
@@ -249,11 +365,7 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
     webRouter.post(
       '/user/emails/endorse',
       AuthenticationController.requireLogin(),
-      RateLimiterMiddleware.rateLimit({
-        endpointName: 'endorse-email',
-        maxRequests: 30,
-        timeInterval: 60,
-      }),
+      RateLimiterMiddleware.rateLimitV2(rateLimiters.endorseEmail),
       UserEmailsController.endorse
     )
   }
@@ -296,11 +408,7 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
 
   webRouter.post(
     '/user/delete',
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'delete-user',
-      maxRequests: 10,
-      timeInterval: 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.deleteUser),
     AuthenticationController.requireLogin(),
     UserController.tryDeleteUser
   )
@@ -343,31 +451,19 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
   webRouter.get(
     '/project',
     AuthenticationController.requireLogin(),
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'open-dashboard',
-      maxRequests: 30,
-      timeInterval: 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.openDashboard),
     ProjectController.projectListPage
   )
   webRouter.post(
     '/project/new',
     AuthenticationController.requireLogin(),
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'create-project',
-      maxRequests: 20,
-      timeInterval: 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.createProject),
     ProjectController.newProject
   )
   webRouter.post(
     '/api/project',
     AuthenticationController.requireLogin(),
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'get-projects',
-      maxRequests: 30,
-      timeInterval: 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.getProjects),
     ProjectListController.getProjectsJson
   )
 
@@ -379,11 +475,8 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
   ]) {
     webRouter.get(
       route,
-      RateLimiterMiddleware.rateLimit({
-        endpointName: 'open-project',
+      RateLimiterMiddleware.rateLimitV2(rateLimiters.openProject, {
         params: ['Project_id'],
-        maxRequests: 15,
-        timeInterval: 60,
       }),
       AuthenticationController.validateUserSession(),
       AuthorizationMiddleware.ensureUserCanReadProject,
@@ -421,11 +514,8 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
 
   webRouter.post(
     '/project/:Project_id/compile',
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'compile-project-http',
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.compileProjectHttp, {
       params: ['Project_id'],
-      maxRequests: 800,
-      timeInterval: 60 * 60,
     }),
     AuthorizationMiddleware.ensureUserCanReadProject,
     CompileController.compile
@@ -472,12 +562,10 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
   )
 
   // Align with limits defined in CompileController.downloadPdf
-  const rateLimiterMiddlewareOutputFiles = RateLimiterMiddleware.rateLimit({
-    endpointName: 'misc-output-download',
-    params: ['Project_id'],
-    maxRequests: 1000,
-    timeInterval: 60 * 60,
-  })
+  const rateLimiterMiddlewareOutputFiles = RateLimiterMiddleware.rateLimitV2(
+    rateLimiters.miscOutputDownload,
+    { params: ['Project_id'] }
+  )
 
   // Used by the pdf viewers
   webRouter.get(
@@ -665,11 +753,7 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
   )
   webRouter.get(
     '/project/:project_id/version/:version/zip',
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'download-project-revision',
-      maxRequests: 30,
-      timeInterval: 60 * 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.downloadProjectRevision),
     AuthorizationMiddleware.blockRestrictedUserFromProject,
     AuthorizationMiddleware.ensureUserCanReadProject,
     HistoryController.downloadZipOfVersion
@@ -721,11 +805,8 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
 
   webRouter.get(
     '/Project/:Project_id/download/zip',
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'zip-download',
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.zipDownload, {
       params: ['Project_id'],
-      maxRequests: 10,
-      timeInterval: 60,
     }),
     AuthorizationMiddleware.ensureUserCanReadProject,
     ProjectDownloadsController.downloadProject
@@ -733,11 +814,7 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
   webRouter.get(
     '/project/download/zip',
     AuthenticationController.requireLogin(),
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'multiple-projects-zip-download',
-      maxRequests: 10,
-      timeInterval: 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.multipleProjectsZipDownload),
     AuthorizationMiddleware.ensureUserCanReadMultipleProjects,
     ProjectDownloadsController.downloadMultipleProjects
   )
@@ -796,11 +873,7 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
   webRouter.post(
     '/tag',
     AuthenticationController.requireLogin(),
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'create-tag',
-      maxRequests: 30,
-      timeInterval: 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.createTag),
     validate({
       body: Joi.object({
         name: Joi.string().required(),
@@ -811,11 +884,7 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
   webRouter.post(
     '/tag/:tagId/rename',
     AuthenticationController.requireLogin(),
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'rename-tag',
-      maxRequests: 30,
-      timeInterval: 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.renameTag),
     validate({
       body: Joi.object({
         name: Joi.string().required(),
@@ -826,31 +895,19 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
   webRouter.delete(
     '/tag/:tagId',
     AuthenticationController.requireLogin(),
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'delete-tag',
-      maxRequests: 30,
-      timeInterval: 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.deleteTag),
     TagsController.deleteTag
   )
   webRouter.post(
     '/tag/:tagId/project/:projectId',
     AuthenticationController.requireLogin(),
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'add-project-to-tag',
-      maxRequests: 30,
-      timeInterval: 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.addProjectToTag),
     TagsController.addProjectToTag
   )
   webRouter.post(
     '/tag/:tagId/projects',
     AuthenticationController.requireLogin(),
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'add-projects-to-tag',
-      maxRequests: 30,
-      timeInterval: 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.addProjectsToTag),
     validate({
       body: Joi.object({
         projectIds: Joi.array().items(Joi.string()).required(),
@@ -861,21 +918,13 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
   webRouter.delete(
     '/tag/:tagId/project/:projectId',
     AuthenticationController.requireLogin(),
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'remove-project-from-tag',
-      maxRequests: 30,
-      timeInterval: 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.removeProjectFromTag),
     TagsController.removeProjectFromTag
   )
   webRouter.delete(
     '/tag/:tagId/projects',
     AuthenticationController.requireLogin(),
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'remove-projects-from-tag',
-      maxRequests: 30,
-      timeInterval: 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.removeProjectsFromTag),
     validate({
       body: Joi.object({
         projectIds: Joi.array().items(Joi.string()).required(),
@@ -1034,32 +1083,20 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
     '/project/:project_id/messages',
     AuthorizationMiddleware.blockRestrictedUserFromProject,
     AuthorizationMiddleware.ensureUserCanReadProject,
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'send-chat-message',
-      maxRequests: 100,
-      timeInterval: 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.sendChatMessage),
     ChatController.sendMessage
   )
 
   webRouter.post(
     '/project/:Project_id/references/index',
     AuthorizationMiddleware.ensureUserCanReadProject,
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'index-project-references',
-      maxRequests: 30,
-      timeInterval: 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.indexProjectReferences),
     ReferencesController.index
   )
   webRouter.post(
     '/project/:Project_id/references/indexAll',
     AuthorizationMiddleware.ensureUserCanReadProject,
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'index-all-project-references',
-      maxRequests: 30,
-      timeInterval: 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.indexAllProjectReferences),
     ReferencesController.indexAll
   )
 
@@ -1104,11 +1141,7 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
   )
   publicApiRouter.post(
     '/api/institutions/confirm_university_domain',
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'confirm-university-domain',
-      maxRequests: 1,
-      timeInterval: 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.confirmUniversityDomain),
     AuthenticationController.requirePrivateApiAuth(),
     InstitutionsController.confirmDomain
   )
@@ -1227,11 +1260,7 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
 
   webRouter.get(
     '/status/compiler/:Project_id',
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'status-compiler',
-      maxRequests: 10,
-      timeInterval: 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.statusCompiler),
     AuthorizationMiddleware.ensureUserCanReadProject,
     function (req, res) {
       const projectId = req.params.Project_id
@@ -1299,13 +1328,34 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
     res.sendStatus(204)
   })
 
-  webRouter.get(
-    `/read/:token(${TokenAccessController.READ_ONLY_TOKEN_PATTERN})`,
+  webRouter.post(
+    '/record-user-content-domain-access-check-result',
+    validate({
+      body: Joi.object({
+        failed: Joi.number().min(0).max(6),
+        succeeded: Joi.number().min(0).max(6),
+      }),
+    }),
     RateLimiterMiddleware.rateLimit({
-      endpointName: 'read-only-token',
+      endpointName: 'user-content-domain-a-c-r',
       maxRequests: 15,
       timeInterval: 60,
     }),
+    UserContentDomainController.recordCheckResult
+  )
+  webRouter.post(
+    '/record-user-content-domain-fallback-usage',
+    RateLimiterMiddleware.rateLimit({
+      endpointName: 'user-content-domain-fb-u',
+      maxRequests: 15,
+      timeInterval: 60,
+    }),
+    UserContentDomainController.recordFallbackUsage
+  )
+
+  webRouter.get(
+    `/read/:token(${TokenAccessController.READ_ONLY_TOKEN_PATTERN})`,
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.readOnlyToken),
     AnalyticsRegistrationSourceMiddleware.setSource(
       'collaboration',
       'link-sharing'
@@ -1316,11 +1366,7 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
 
   webRouter.get(
     `/:token(${TokenAccessController.READ_AND_WRITE_TOKEN_PATTERN})`,
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'read-and-write-token',
-      maxRequests: 15,
-      timeInterval: 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.readAndWriteToken),
     AnalyticsRegistrationSourceMiddleware.setSource(
       'collaboration',
       'link-sharing'
@@ -1331,21 +1377,13 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
 
   webRouter.post(
     `/:token(${TokenAccessController.READ_AND_WRITE_TOKEN_PATTERN})/grant`,
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'grant-token-access-read-write',
-      maxRequests: 10,
-      timeInterval: 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.grantTokenAccessReadWrite),
     TokenAccessController.grantTokenAccessReadAndWrite
   )
 
   webRouter.post(
     `/read/:token(${TokenAccessController.READ_ONLY_TOKEN_PATTERN})/grant`,
-    RateLimiterMiddleware.rateLimit({
-      endpointName: 'grant-token-access-read-only',
-      maxRequests: 10,
-      timeInterval: 60,
-    }),
+    RateLimiterMiddleware.rateLimitV2(rateLimiters.grantTokenAccessReadOnly),
     TokenAccessController.grantTokenAccessReadOnly
   )
 

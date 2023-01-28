@@ -48,6 +48,10 @@ const ProjectListController = require('./ProjectListController')
 const ProjectAuditLogHandler = require('./ProjectAuditLogHandler')
 const PublicAccessLevels = require('../Authorization/PublicAccessLevels')
 
+// We want the recompile-button-text split test to only target users who have
+// signed up recently.
+const RECOMPILE_BUTTON_SPLIT_TEST_MIN_SIGNUP_DATE = new Date('2023-01-16')
+
 /**
  * @typedef {import("./types").GetProjectsRequest} GetProjectsRequest
  * @typedef {import("./types").GetProjectsResponse} GetProjectsResponse
@@ -552,6 +556,26 @@ const ProjectController = {
             }
           )
         },
+        newUsersMicroSurveyAssignment(cb) {
+          SplitTestHandler.getAssignment(
+            req,
+            res,
+            'new-users-micro-survey',
+            (err, assignment) => {
+              if (err) {
+                logger.error(
+                  { err },
+                  'failed to get "new-users-micro-survey" split test assignment'
+                )
+
+                const defaultAssignment = { variant: 'default' }
+                cb(null, defaultAssignment)
+              } else {
+                cb(null, assignment)
+              }
+            }
+          )
+        },
         survey(cb) {
           SurveyHandler.getSurvey(userId, (err, survey) => {
             if (err) {
@@ -574,6 +598,7 @@ const ProjectController = {
           user,
           userEmailsData,
           groupsAndEnterpriseBannerAssignment,
+          newUsersMicroSurveyAssignment,
           userIsMemberOfGroupSubscription,
         } = results
 
@@ -714,6 +739,16 @@ const ProjectController = {
           !userIsMemberOfGroupSubscription &&
           !hasPaidAffiliation
 
+        const SEVEN_DAYS = 1000 * 60 * 60 * 24 * 7
+
+        const isUserLessThanSevenDaysOld =
+          user.signUpDate && Date.now() - user.signUpDate.getTime() < SEVEN_DAYS
+
+        const showNewUsersMicroSurvey =
+          Features.hasFeature('saas') &&
+          newUsersMicroSurveyAssignment.variant === 'enabled' &&
+          isUserLessThanSevenDaysOld
+
         ProjectController._injectProjectUsers(projects, (error, projects) => {
           if (error != null) {
             return next(error)
@@ -741,6 +776,7 @@ const ProjectController = {
             showGroupsAndEnterpriseBanner,
             groupsAndEnterpriseBannerVariant:
               groupsAndEnterpriseBannerAssignment.variant,
+            showNewUsersMicroSurvey,
           }
 
           const paidUser =
@@ -945,16 +981,15 @@ const ProjectController = {
             }
           )
         },
-        newSourceEditorAssignment(cb) {
+        legacySourceEditorAssignment(cb) {
           SplitTestHandler.getAssignment(
             req,
             res,
-            'source-editor',
-            {},
+            'source-editor-legacy',
             (error, assignment) => {
               // do not fail editor load if assignment fails
               if (error) {
-                cb(null)
+                cb(null, { variant: 'default' })
               } else {
                 cb(null, assignment)
               }
@@ -982,21 +1017,6 @@ const ProjectController = {
             req,
             res,
             'latex-log-parser',
-            (error, assignment) => {
-              // do not fail editor load if assignment fails
-              if (error) {
-                cb(null, { variant: 'default' })
-              } else {
-                cb(null, assignment)
-              }
-            }
-          )
-        },
-        linkSharingUpgradePromptAssignment(cb) {
-          SplitTestHandler.getAssignment(
-            req,
-            res,
-            'link-sharing-upgrade-prompt',
             (error, assignment) => {
               // do not fail editor load if assignment fails
               if (error) {
@@ -1067,6 +1087,64 @@ const ProjectController = {
             }
           )
         },
+        richTextAssignment(cb) {
+          SplitTestHandler.getAssignment(
+            req,
+            res,
+            'rich-text',
+            (error, assignment) => {
+              // do not fail editor load if assignment fails
+              if (error) {
+                cb(null, { variant: 'default' })
+              } else {
+                cb(null, assignment)
+              }
+            }
+          )
+        },
+        userContentDomainAccessCheckAssigment(cb) {
+          SplitTestHandler.getAssignment(
+            req,
+            res,
+            'user-content-domain-access-check',
+            () => {
+              // We'll pick up the assignment from the res.locals assignment.
+              cb()
+            }
+          )
+        },
+        reportUserContentDomainAccessCheckErrorAssigment(cb) {
+          SplitTestHandler.getAssignment(
+            req,
+            res,
+            'report-user-content-domain-access-check-error',
+            () => {
+              // We'll pick up the assignment from the res.locals assignment.
+              cb()
+            }
+          )
+        },
+        recompileButtonTextAssignment: [
+          'user',
+          (results, cb) => {
+            if (
+              results.user.signUpDate <
+              RECOMPILE_BUTTON_SPLIT_TEST_MIN_SIGNUP_DATE
+            ) {
+              return cb()
+            }
+            SplitTestHandler.getAssignment(
+              req,
+              res,
+              'recompile-button-text',
+              {},
+              () => {
+                // do not fail editor load if assignment fails
+                cb()
+              }
+            )
+          },
+        ],
       },
       (
         err,
@@ -1080,9 +1158,10 @@ const ProjectController = {
           isTokenMember,
           isInvitedMember,
           brandVariation,
-          newSourceEditorAssignment,
+          legacySourceEditorAssignment,
           pdfjsAssignment,
           editorLeftMenuAssignment,
+          richTextAssignment,
         }
       ) => {
         if (err != null) {
@@ -1159,10 +1238,10 @@ const ProjectController = {
 
             const detachRole = req.params.detachRole
 
-            const showNewSourceEditorOption =
-              newSourceEditorAssignment?.variant === 'codemirror' ||
-              user.betaProgram ||
-              shouldDisplayFeature('new_source_editor', false) // also allow override via ?new_source_editor=true
+            const showLegacySourceEditor =
+              legacySourceEditorAssignment.variant === 'default' ||
+              // Also allow override via legacy_source_editor=true in query string
+              shouldDisplayFeature('legacy_source_editor')
 
             const editorLeftMenuReact =
               editorLeftMenuAssignment?.variant === 'react'
@@ -1255,7 +1334,7 @@ const ProjectController = {
               showSupport: Features.hasFeature('support'),
               pdfjsVariant: pdfjsAssignment.variant,
               debugPdfDetach,
-              showNewSourceEditorOption,
+              showLegacySourceEditor,
               showSymbolPalette,
               galileoEnabled,
               galileoFeatures,
@@ -1266,6 +1345,7 @@ const ProjectController = {
               fixedSizeDocument: true,
               useOpenTelemetry: Settings.useOpenTelemetryClient,
               showCM6SwitchAwaySurvey: Settings.showCM6SwitchAwaySurvey,
+              richTextVariant: richTextAssignment.variant,
             })
             timer.done()
           }
