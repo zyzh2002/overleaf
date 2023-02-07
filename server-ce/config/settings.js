@@ -205,6 +205,8 @@ const settings = {
     dumpFolder: Path.join(TMP_DIR, 'dumpFolder'),
     // Where to write uploads before they are processed
     uploadFolder: Path.join(TMP_DIR, 'uploads'),
+    // Where to write intermediate file for full project history migration
+    projectHistories: Path.join(TMP_DIR, 'projectHistories'),
     // Where to write the project to disk before running LaTeX on it
     compilesDir: Path.join(DATA_DIR, 'compiles'),
     // Where to cache downloaded URLs for the CLSI

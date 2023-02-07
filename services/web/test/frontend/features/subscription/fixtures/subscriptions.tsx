@@ -1,4 +1,7 @@
-import { Subscription } from '../../../../../types/subscription/dashboard/subscription'
+import {
+  GroupSubscription,
+  Subscription,
+} from '../../../../../types/subscription/dashboard/subscription'
 const dateformat = require('dateformat')
 const today = new Date()
 const oneYearFromToday = new Date().setFullYear(today.getFullYear() + 1)
@@ -25,7 +28,6 @@ export const annualActiveSubscription: Subscription = {
     name: 'Standard (Collaborator) Annual',
     price_in_cents: 21900,
     annual: true,
-    features: {},
     featureDescription: [],
   },
   recurly: {
@@ -65,7 +67,6 @@ export const pastDueExpiredSubscription: Subscription = {
     name: 'Standard (Collaborator) Annual',
     price_in_cents: 21900,
     annual: true,
-    features: {},
     featureDescription: [],
   },
   recurly: {
@@ -105,7 +106,6 @@ export const canceledSubscription: Subscription = {
     name: 'Standard (Collaborator) Annual',
     price_in_cents: 21900,
     annual: true,
-    features: {},
     featureDescription: [],
   },
   recurly: {
@@ -145,7 +145,6 @@ export const pendingSubscriptionChange: Subscription = {
     name: 'Standard (Collaborator) Annual',
     price_in_cents: 21900,
     annual: true,
-    features: {},
     featureDescription: [],
   },
   recurly: {
@@ -172,18 +171,18 @@ export const pendingSubscriptionChange: Subscription = {
     name: 'Professional Annual',
     price_in_cents: 42900,
     annual: true,
-    features: {},
     featureDescription: [],
   },
 }
 
-export const groupActiveSubscription: Subscription = {
+export const groupActiveSubscription: GroupSubscription = {
   manager_ids: ['abc123'],
   member_ids: ['abc123'],
   invited_emails: [],
   groupPlan: true,
+  teamName: 'GAS',
   membersLimit: 10,
-  _id: 'def456',
+  _id: 'bcd567',
   admin_id: 'abc123',
   teamInvites: [],
   planCode: 'group_collaborator_10_enterprise',
@@ -194,7 +193,6 @@ export const groupActiveSubscription: Subscription = {
     hideFromUsers: true,
     price_in_cents: 129000,
     annual: true,
-    features: {},
     groupPlan: true,
     membersLimit: 10,
     membersLimitAddOn: 'additional-license',
@@ -220,72 +218,72 @@ export const groupActiveSubscription: Subscription = {
   },
 }
 
-export const groupActiveSubscriptionWithPendingLicenseChange: Subscription = {
-  manager_ids: ['abc123'],
-  member_ids: ['abc123'],
-  invited_emails: [],
-  groupPlan: true,
-  membersLimit: 10,
-  _id: 'def456',
-  admin_id: 'abc123',
-  teamInvites: [],
-  planCode: 'group_collaborator_10_enterprise',
-  recurlySubscription_id: 'ghi789',
-  plan: {
-    planCode: 'group_collaborator_10_enterprise',
-    name: 'Overleaf Standard (Collaborator) - Group Account (10 licenses) - Enterprise',
-    hideFromUsers: true,
-    price_in_cents: 129000,
-    annual: true,
-    features: {},
+export const groupActiveSubscriptionWithPendingLicenseChange: GroupSubscription =
+  {
+    manager_ids: ['abc123'],
+    member_ids: ['abc123'],
+    invited_emails: [],
     groupPlan: true,
+    teamName: 'GASWPLC',
     membersLimit: 10,
-    membersLimitAddOn: 'additional-license',
-  },
-  recurly: {
-    tax: 0,
-    taxRate: 0,
-    billingDetailsLink: '/user/subscription/recurly/billing-details',
-    accountManagementLink: '/user/subscription/recurly/account-management',
-    additionalLicenses: 11,
-    totalLicenses: 21,
-    nextPaymentDueAt,
-    currency: 'USD',
-    state: 'active',
-    trialEndsAtFormatted: null,
-    trial_ends_at: null,
-    activeCoupons: [],
-    account: {
-      has_canceled_subscription: {
-        _: 'false',
-        $: {
-          type: 'boolean',
-        },
-      },
-      has_past_due_invoice: {
-        _: 'false',
-        $: {
-          type: 'boolean',
-        },
-      },
+    _id: 'def456',
+    admin_id: 'abc123',
+    teamInvites: [],
+    planCode: 'group_collaborator_10_enterprise',
+    recurlySubscription_id: 'ghi789',
+    plan: {
+      planCode: 'group_collaborator_10_enterprise',
+      name: 'Overleaf Standard (Collaborator) - Group Account (10 licenses) - Enterprise',
+      hideFromUsers: true,
+      price_in_cents: 129000,
+      annual: true,
+      groupPlan: true,
+      membersLimit: 10,
+      membersLimitAddOn: 'additional-license',
     },
-    displayPrice: '$2967.00',
-    currentPlanDisplayPrice: '$2709.00',
-    pendingAdditionalLicenses: 13,
-    pendingTotalLicenses: 23,
-  },
-  pendingPlan: {
-    planCode: 'group_collaborator_10_enterprise',
-    name: 'Overleaf Standard (Collaborator) - Group Account (10 licenses) - Enterprise',
-    hideFromUsers: true,
-    price_in_cents: 129000,
-    annual: true,
-    features: {},
-    groupPlan: true,
-    membersLimit: 10,
-    membersLimitAddOn: 'additional-license',
-  },
-}
+    recurly: {
+      tax: 0,
+      taxRate: 0,
+      billingDetailsLink: '/user/subscription/recurly/billing-details',
+      accountManagementLink: '/user/subscription/recurly/account-management',
+      additionalLicenses: 11,
+      totalLicenses: 21,
+      nextPaymentDueAt,
+      currency: 'USD',
+      state: 'active',
+      trialEndsAtFormatted: null,
+      trial_ends_at: null,
+      activeCoupons: [],
+      account: {
+        has_canceled_subscription: {
+          _: 'false',
+          $: {
+            type: 'boolean',
+          },
+        },
+        has_past_due_invoice: {
+          _: 'false',
+          $: {
+            type: 'boolean',
+          },
+        },
+      },
+      displayPrice: '$2967.00',
+      currentPlanDisplayPrice: '$2709.00',
+      pendingAdditionalLicenses: 13,
+      pendingTotalLicenses: 23,
+    },
+    pendingPlan: {
+      planCode: 'group_collaborator_10_enterprise',
+      name: 'Overleaf Standard (Collaborator) - Group Account (10 licenses) - Enterprise',
+      hideFromUsers: true,
+      price_in_cents: 129000,
+      annual: true,
+      groupPlan: true,
+      membersLimit: 10,
+      membersLimitAddOn: 'additional-license',
+    },
+  }
 
 export const trialSubscription: Subscription = {
   manager_ids: ['abc123'],
@@ -302,7 +300,6 @@ export const trialSubscription: Subscription = {
     planCode: 'paid-personal_free_trial_7_days',
     name: 'Personal',
     price_in_cents: 1500,
-    features: {},
     featureDescription: [],
     hideFromUsers: true,
   },

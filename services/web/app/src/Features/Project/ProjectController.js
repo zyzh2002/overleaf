@@ -556,26 +556,6 @@ const ProjectController = {
             }
           )
         },
-        newUsersMicroSurveyAssignment(cb) {
-          SplitTestHandler.getAssignment(
-            req,
-            res,
-            'new-users-micro-survey',
-            (err, assignment) => {
-              if (err) {
-                logger.error(
-                  { err },
-                  'failed to get "new-users-micro-survey" split test assignment'
-                )
-
-                const defaultAssignment = { variant: 'default' }
-                cb(null, defaultAssignment)
-              } else {
-                cb(null, assignment)
-              }
-            }
-          )
-        },
         survey(cb) {
           SurveyHandler.getSurvey(userId, (err, survey) => {
             if (err) {
@@ -598,7 +578,6 @@ const ProjectController = {
           user,
           userEmailsData,
           groupsAndEnterpriseBannerAssignment,
-          newUsersMicroSurveyAssignment,
           userIsMemberOfGroupSubscription,
         } = results
 
@@ -739,16 +718,6 @@ const ProjectController = {
           !userIsMemberOfGroupSubscription &&
           !hasPaidAffiliation
 
-        const SEVEN_DAYS = 1000 * 60 * 60 * 24 * 7
-
-        const isUserLessThanSevenDaysOld =
-          user.signUpDate && Date.now() - user.signUpDate.getTime() < SEVEN_DAYS
-
-        const showNewUsersMicroSurvey =
-          Features.hasFeature('saas') &&
-          newUsersMicroSurveyAssignment.variant === 'enabled' &&
-          isUserLessThanSevenDaysOld
-
         ProjectController._injectProjectUsers(projects, (error, projects) => {
           if (error != null) {
             return next(error)
@@ -776,7 +745,6 @@ const ProjectController = {
             showGroupsAndEnterpriseBanner,
             groupsAndEnterpriseBannerVariant:
               groupsAndEnterpriseBannerAssignment.variant,
-            showNewUsersMicroSurvey,
           }
 
           const paidUser =
@@ -1107,6 +1075,28 @@ const ProjectController = {
             req,
             res,
             'user-content-domain-access-check',
+            () => {
+              // We'll pick up the assignment from the res.locals assignment.
+              cb()
+            }
+          )
+        },
+        userContentDomainAccessCheckDelayAssigment(cb) {
+          SplitTestHandler.getAssignment(
+            req,
+            res,
+            'user-content-domain-access-check-delay',
+            () => {
+              // We'll pick up the assignment from the res.locals assignment.
+              cb()
+            }
+          )
+        },
+        userContentDomainAccessCheckMaxChecksAssigment(cb) {
+          SplitTestHandler.getAssignment(
+            req,
+            res,
+            'user-content-domain-access-check-max-checks',
             () => {
               // We'll pick up the assignment from the res.locals assignment.
               cb()

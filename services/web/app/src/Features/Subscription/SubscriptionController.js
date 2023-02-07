@@ -56,16 +56,23 @@ async function plansPage(req, res) {
     return defaultValue
   }
 
-  const newPlansPageAssignmentV2 =
-    await SplitTestHandler.promises.getAssignment(
+  let plansPageLayoutV3Assignment = { variant: 'default' }
+
+  try {
+    plansPageLayoutV3Assignment = await SplitTestHandler.promises.getAssignment(
       req,
       res,
-      'plans-page-layout-v2-annual'
+      'plans-page-layout-v3'
     )
+  } catch (error) {
+    logger.error(
+      { err: error },
+      'failed to get "plans-page-layout-v3" split test assignment'
+    )
+  }
 
-  const newPlansPageVariantV2 =
-    newPlansPageAssignmentV2 &&
-    newPlansPageAssignmentV2.variant === 'new-plans-page'
+  const showNewPlansPage =
+    plansPageLayoutV3Assignment.variant === 'new-plans-page'
 
   let defaultGroupPlanModalCurrency = 'USD'
   if (validGroupPlanModalOptions.currency.includes(recommendedCurrency)) {
@@ -73,14 +80,16 @@ async function plansPage(req, res) {
   }
   const groupPlanModalDefaults = {
     plan_code: getDefault('plan', 'plan_code', 'collaborator'),
-    size: getDefault('number', 'size', newPlansPageVariantV2 ? '2' : '10'),
+    size: getDefault('number', 'size', showNewPlansPage ? '2' : '10'),
     currency: getDefault('currency', 'currency', defaultGroupPlanModalCurrency),
     usage: getDefault('usage', 'usage', 'enterprise'),
   }
 
-  AnalyticsManager.recordEventForSession(req.session, 'plans-page-view')
+  AnalyticsManager.recordEventForSession(req.session, 'plans-page-view', {
+    'plans-page-layout-v3': plansPageLayoutV3Assignment.variant,
+  })
 
-  const template = newPlansPageVariantV2
+  const template = showNewPlansPage
     ? 'subscriptions/plans-marketing-v2'
     : 'subscriptions/plans-marketing'
 
@@ -96,7 +105,7 @@ async function plansPage(req, res) {
     groupPlans: GroupPlansData,
     groupPlanModalOptions,
     groupPlanModalDefaults,
-    newPlansPageVariantV2,
+    plansPageLayoutV3Variant: plansPageLayoutV3Assignment.variant,
     initialLocalizedGroupPrice:
       SubscriptionHelper.generateInitialLocalizedGroupPrice(
         recommendedCurrency
@@ -166,38 +175,22 @@ async function _paymentReactPage(req, res) {
         currency = recommendedCurrency
       }
 
-      const refreshedPaymentPageAssignment =
-        await SplitTestHandler.promises.getAssignment(
-          req,
-          res,
-          'payment-page-refresh'
-        )
-      const useRefreshedPaymentPage =
-        refreshedPaymentPageAssignment &&
-        refreshedPaymentPageAssignment.variant === 'refreshed-payment-page'
-
       await SplitTestHandler.promises.getAssignment(
         req,
         res,
         'student-check-modal'
       )
 
-      // TODO
-      const template = useRefreshedPaymentPage
-        ? 'subscriptions/new-react'
-        : 'subscriptions/new-react'
-
-      res.render(template, {
+      res.render('subscriptions/new-react', {
         title: 'subscribe',
         currency,
         countryCode,
         plan,
-        recurlyConfig: JSON.stringify({
-          currency,
-          subdomain: Settings.apis.recurly.subdomain,
-        }),
+        couponCode: req.query.cc,
         showCouponField: !!req.query.scf,
-        showVatField: !!req.query.svf,
+        itm_campaign: req.query.itm_campaign,
+        itm_content: req.query.itm_content,
+        itm_referrer: req.query.itm_referrer,
       })
     }
   }
