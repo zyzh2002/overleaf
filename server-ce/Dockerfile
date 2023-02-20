@@ -52,9 +52,10 @@ ADD server-ce/cron /overleaf/cron
 ADD server-ce/config/crontab-history /etc/cron.d/crontab-history
 RUN chmod 600 /etc/cron.d/crontab-history
 
-# Copy Phusion Image startup scripts to its location
-# --------------------------------------------------
+# Copy Phusion Image startup and shutdown scripts to their locations
+# ------------------------------------------------------------------
 COPY server-ce/init_scripts/ /etc/my_init.d/
+COPY server-ce/init_preshutdown_scripts/ /etc/my_init.pre_shutdown.d/
 
 # Copy app settings files
 # -----------------------
@@ -63,11 +64,17 @@ COPY server-ce/config/settings.js /etc/sharelatex/settings.js
 # Copy history-v1 files
 # -----------------------
 COPY server-ce/config/production.json /overleaf/services/history-v1/config/production.json
+COPY server-ce/config/custom-environment-variables.json /overleaf/services/history-v1/config/custom-environment-variables.json
 
 # Copy grunt thin wrapper
 # -----------------------
 ADD server-ce/bin/grunt /usr/local/bin/grunt
 RUN chmod +x /usr/local/bin/grunt
+
+# File that controls open|closed status of the site
+# -------------------------------------------------
+ENV SITE_MAINTENANCE_FILE "/etc/sharelatex/site_status"
+RUN touch $SITE_MAINTENANCE_FILE
 
 # Set Environment Variables
 # --------------------------------
@@ -79,6 +86,21 @@ ENV ADMIN_PRIVILEGE_AVAILABLE "true"
 ENV SHARELATEX_APP_NAME "Overleaf Community Edition"
 
 ENV OPTIMISE_PDF "true"
+
+ENV SHARELATEX_FPH_INITIALIZE_NEW_PROJECTS "true"
+ENV SHARELATEX_FPH_DISPLAY_NEW_PROJECTS "true"
+
+ENV SHARELATEX_HISTORY_BACKEND "fs"
+ENV SHARELATEX_HISTORY_BLOBS_BUCKET "/var/lib/sharelatex/data/history/overleaf-blobs"
+ENV SHARELATEX_HISTORY_PROJECT_BLOBS_BUCKET "/var/lib/sharelatex/data/history/overleaf-project-blobs"
+ENV SHARELATEX_HISTORY_CHUNKS_BUCKET "/var/lib/sharelatex/data/history/overleaf-chunks"
+ENV SHARELATEX_HISTORY_ZIPS_BUCKET "/var/lib/sharelatex/data/history/overleaf-zips"
+ENV SHARELATEX_HISTORY_ANALYTICS_BUCKET "/var/lib/sharelatex/data/history/overleaf-analytics"
+
+# Phusion Image timeouts before sending SIGKILL to processes
+# ----------------------------------------------------------
+ENV KILL_PROCESS_TIMEOUT 55
+ENV KILL_ALL_PROCESSES_TIMEOUT 55
 
 ENV NODE_ENV "production"
 ENV LOG_LEVEL "info"

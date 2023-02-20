@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Subscription } from '../../../../../../types/subscription/dashboard/subscription'
 import { ActiveSubscription } from './states/active/active'
@@ -47,29 +46,20 @@ function PersonalSubscriptionStates({
   }
 }
 
-function PersonalSubscription({
-  subscription,
-}: {
-  subscription?: Subscription
-}) {
+function PersonalSubscription() {
   const { t } = useTranslation()
-  const { recurlyLoadError, setRecurlyLoadError } =
+  const { personalSubscription, recurlyLoadError } =
     useSubscriptionDashboardContext()
 
-  useEffect(() => {
-    if (typeof window.recurly === 'undefined' || !window.recurly) {
-      setRecurlyLoadError(true)
-    }
-  })
-
-  if (!subscription) return null
+  if (!personalSubscription) return null
 
   return (
     <>
-      {subscription.recurly.account.has_past_due_invoice._ === 'true' && (
-        <PastDueSubscriptionAlert subscription={subscription} />
+      {personalSubscription.recurly.account.has_past_due_invoice._ ===
+        'true' && (
+        <PastDueSubscriptionAlert subscription={personalSubscription} />
       )}
-      <PersonalSubscriptionStates subscription={subscription} />
+      <PersonalSubscriptionStates subscription={personalSubscription} />
       {recurlyLoadError && (
         <div className="alert alert-warning" role="alert">
           <strong>{t('payment_provider_unreachable_error')}</strong>

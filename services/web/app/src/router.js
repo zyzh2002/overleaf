@@ -206,11 +206,15 @@ const rateLimiters = {
   userContentDomainAccessCheckResult: new RateLimiter(
     'user-content-domain-a-c-r',
     {
-      points: 15,
+      points: 30,
       duration: 60,
     }
   ),
   userContentDomainFallbackUsage: new RateLimiter('user-content-fb-u', {
+    points: 15,
+    duration: 60,
+  }),
+  userContentDomainMaxAccessChecksHit: new RateLimiter('user-content-mach', {
     points: 15,
     duration: 60,
   }),
@@ -1212,7 +1216,9 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
   })
 
   publicApiRouter.get('/status', (req, res) => {
-    if (!Settings.siteIsOpen) {
+    if (Settings.shuttingDown) {
+      res.sendStatus(503) // Service unavailable
+    } else if (!Settings.siteIsOpen) {
       plainTextResponse(res, 'web site is closed (web)')
     } else if (!Settings.editorIsOpen) {
       plainTextResponse(res, 'web editor is closed (web)')
@@ -1342,6 +1348,7 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
       body: Joi.object({
         failed: Joi.number().min(0).max(6),
         succeeded: Joi.number().min(0).max(6),
+        isOldDomain: Joi.boolean().default(false),
       }),
     }),
     RateLimiterMiddleware.rateLimit(
@@ -1355,6 +1362,13 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
       rateLimiters.userContentDomainFallbackUsage
     ),
     UserContentDomainController.recordFallbackUsage
+  )
+  webRouter.post(
+    '/record-user-content-domain-max-access-checks-hit',
+    RateLimiterMiddleware.rateLimit(
+      rateLimiters.userContentDomainMaxAccessChecksHit
+    ),
+    UserContentDomainController.recordMaxAccessChecksHit
   )
 
   webRouter.get(

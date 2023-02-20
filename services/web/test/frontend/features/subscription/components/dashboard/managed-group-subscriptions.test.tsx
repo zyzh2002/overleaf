@@ -1,12 +1,15 @@
 import { expect } from 'chai'
-import { render, screen } from '@testing-library/react'
-import ManagedGroupSubscriptions, {
-  ManagedGroupSubscription,
-} from '../../../../../../frontend/js/features/subscription/components/dashboard/managed-group-subscriptions'
+import { screen } from '@testing-library/react'
 import {
   groupActiveSubscription,
   groupActiveSubscriptionWithPendingLicenseChange,
 } from '../../fixtures/subscriptions'
+import ManagedGroupSubscriptions from '../../../../../../frontend/js/features/subscription/components/dashboard/managed-group-subscriptions'
+import { ManagedGroupSubscription } from '../../../../../../types/subscription/dashboard/subscription'
+import {
+  cleanUpContext,
+  renderWithSubscriptionDashContext,
+} from '../../helpers/render-with-subscription-dash-context'
 
 const managedGroupSubscriptions: ManagedGroupSubscription[] = [
   {
@@ -30,18 +33,19 @@ const managedGroupSubscriptions: ManagedGroupSubscription[] = [
 ]
 
 describe('<ManagedGroupSubscriptions />', function () {
-  beforeEach(function () {
-    window.metaAttributesCache = new Map()
-  })
-
   afterEach(function () {
-    window.metaAttributesCache = new Map()
+    cleanUpContext()
   })
 
   it('renders all managed group subscriptions', function () {
-    render(
-      <ManagedGroupSubscriptions subscriptions={managedGroupSubscriptions} />
-    )
+    renderWithSubscriptionDashContext(<ManagedGroupSubscriptions />, {
+      metaTags: [
+        {
+          name: 'ol-managedGroupSubscriptions',
+          value: managedGroupSubscriptions,
+        },
+      ],
+    })
 
     const elements = screen.getAllByText('You are a', {
       exact: false,
@@ -85,7 +89,7 @@ describe('<ManagedGroupSubscriptions />', function () {
   })
 
   it('renders nothing when there are no group memberships', function () {
-    render(<ManagedGroupSubscriptions subscriptions={undefined} />)
+    renderWithSubscriptionDashContext(<ManagedGroupSubscriptions />)
     const elements = screen.queryAllByText('You are a', {
       exact: false,
     })

@@ -919,9 +919,12 @@ async function buildUpdates(
  * @returns {Promise<void>}
  */
 async function deleteProjectHistory(projectId) {
-  await HistoryManager.promises.deleteProjectHistory(projectId)
+  // look up the history id from the project
+  const historyId = await ProjectHistoryHandler.promises.getHistoryId(projectId)
+  // delete the history from project-history and history-v1
+  await HistoryManager.promises.deleteProject(projectId, historyId)
   // TODO: send a message to document-updater?
-  await ProjectHistoryHandler.unsetHistory(projectId)
+  await ProjectHistoryHandler.promises.unsetHistory(projectId)
 }
 
 /**
@@ -1295,11 +1298,11 @@ async function migrateProjectHistory(projectId, options = {}) {
           throw error
         }
       }
-      // set the display to v2 history
       logger.debug(
         { projectId },
         'Switching on full project history display for project'
       )
+      // Set the display to v2 history but allow downgrading (second argument allowDowngrade = true)
       await ProjectHistoryHandler.promises.upgradeHistory(projectId, true)
     } catch (error) {
       // delete the history id again if something failed?

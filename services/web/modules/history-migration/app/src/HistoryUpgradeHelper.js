@@ -18,12 +18,12 @@ const DATETIME_WHEN_FULL_PROJECT_HISTORY_ENABLED =
     : null
 
 async function countProjects(query = {}) {
-  const count = await db.projects.count(query)
+  const count = await db.projects.countDocuments(query)
   return count
 }
 
 async function countDocHistory(query = {}) {
-  const count = await db.docHistory.count(query)
+  const count = await db.docHistory.countDocuments(query)
   return count
 }
 
@@ -98,7 +98,7 @@ async function determineProjectHistoryType(project) {
   }
 }
 
-async function upgradeProject(project) {
+async function upgradeProject(project, options) {
   const historyType = await determineProjectHistoryType(project)
   if (historyType === 'V2') {
     return { historyType, upgraded: true }
@@ -107,7 +107,7 @@ async function upgradeProject(project) {
   if (!upgradeFn) {
     return { error: 'unsupported history type' }
   }
-  const result = await upgradeFn(project)
+  const result = await upgradeFn(project, options)
   result.historyType = historyType
   return result
 }

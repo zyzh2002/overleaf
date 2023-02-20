@@ -87,7 +87,7 @@ function ProjectListPageContent() {
                   </div>
                 </Col>
               </Row>
-              <div className="project-list-sidebar-survey-wrapper">
+              <div className="project-list-sidebar-survey-wrapper visible-xs">
                 <SurveyWidget />
               </div>
               <div className="visible-xs mt-1">
@@ -104,6 +104,7 @@ function ProjectListPageContent() {
                         <NewProjectButton
                           id="new-project-button-projects-table"
                           className="pull-left me-2"
+                          showAddAffiliationWidget
                         />
                         <SearchForm
                           inputValue={searchText}
@@ -129,8 +130,8 @@ function ProjectListPageContent() {
             {error ? <DashApiError /> : ''}
             <Row className="row-spaced">
               <Col
-                xs={8}
-                xsOffset={2}
+                sm={10}
+                smOffset={1}
                 md={8}
                 mdOffset={2}
                 className="project-list-empty-col"

@@ -48,10 +48,6 @@ const ProjectListController = require('./ProjectListController')
 const ProjectAuditLogHandler = require('./ProjectAuditLogHandler')
 const PublicAccessLevels = require('../Authorization/PublicAccessLevels')
 
-// We want the recompile-button-text split test to only target users who have
-// signed up recently.
-const RECOMPILE_BUTTON_SPLIT_TEST_MIN_SIGNUP_DATE = new Date('2023-01-16')
-
 /**
  * @typedef {import("./types").GetProjectsRequest} GetProjectsRequest
  * @typedef {import("./types").GetProjectsResponse} GetProjectsResponse
@@ -1055,6 +1051,21 @@ const ProjectController = {
             }
           )
         },
+        editorDocumentationButton(cb) {
+          SplitTestHandler.getAssignment(
+            req,
+            res,
+            'documentation-on-editor',
+            (error, assignment) => {
+              // do not fail editor load if assignment fails
+              if (error) {
+                cb(null, { variant: 'default' })
+              } else {
+                cb(null, assignment)
+              }
+            }
+          )
+        },
         richTextAssignment(cb) {
           SplitTestHandler.getAssignment(
             req,
@@ -1067,6 +1078,17 @@ const ProjectController = {
               } else {
                 cb(null, assignment)
               }
+            }
+          )
+        },
+        accessCheckForOldCompileDomainAssigment(cb) {
+          SplitTestHandler.getAssignment(
+            req,
+            res,
+            'access-check-for-old-compile-domain',
+            () => {
+              // We'll pick up the assignment from the res.locals assignment.
+              cb()
             }
           )
         },
@@ -1114,27 +1136,6 @@ const ProjectController = {
             }
           )
         },
-        recompileButtonTextAssignment: [
-          'user',
-          (results, cb) => {
-            if (
-              results.user.signUpDate <
-              RECOMPILE_BUTTON_SPLIT_TEST_MIN_SIGNUP_DATE
-            ) {
-              return cb()
-            }
-            SplitTestHandler.getAssignment(
-              req,
-              res,
-              'recompile-button-text',
-              {},
-              () => {
-                // do not fail editor load if assignment fails
-                cb()
-              }
-            )
-          },
-        ],
       },
       (
         err,
@@ -1229,6 +1230,7 @@ const ProjectController = {
             const detachRole = req.params.detachRole
 
             const showLegacySourceEditor =
+              !Features.hasFeature('saas') ||
               legacySourceEditorAssignment.variant === 'default' ||
               // Also allow override via legacy_source_editor=true in query string
               shouldDisplayFeature('legacy_source_editor')

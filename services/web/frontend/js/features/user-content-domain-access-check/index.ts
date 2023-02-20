@@ -21,7 +21,6 @@ const INITIAL_DELAY_MS = parseIntFromSplitTest(
   'user-content-domain-access-check-delay',
   30_000
 )
-const DELAY_BETWEEN_PROBES_MS = 1_000
 const TIMEOUT_MS = 30_000
 const FULL_SIZE = 739
 const FULL_HASH =
@@ -43,9 +42,6 @@ const CHUNKS = [
     hash: '8278914487a3a099c9af5aa22ed836d6587ca0beb7bf9a059fb0409667b3eb3d',
   },
 ]
-async function sleep(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
 
 function pickZone() {
   const x = Math.random()
@@ -130,7 +126,9 @@ async function singleCheck(
   }
 }
 
-export async function checkUserContentDomainAccess() {
+export async function checkUserContentDomainAccess(
+  compileDomainOrigin: string
+) {
   // Note: The ids are zero prefixed. No actual user/project uses these ids.
   // mongo-id 000000000000000000000000 -> 1970-01-01T00:00:00.000Z
   // mongo-id 000000010000000000000000 -> 1970-01-01T00:00:01.000Z
@@ -145,16 +143,12 @@ export async function checkUserContentDomainAccess() {
   if (getMeta('ol-user_id')) {
     // Logged-in user
     urls.push(
-      `${getMeta(
-        'ol-compilesUserContentDomain'
-      )}/zone/${zone}/project/${projectId}/user/${userId}/build/${buildId}/output/output.pdf`
+      `${compileDomainOrigin}/zone/${zone}/project/${projectId}/user/${userId}/build/${buildId}/output/output.pdf`
     )
   } else {
     // Anonymous user
     urls.push(
-      `${getMeta(
-        'ol-compilesUserContentDomain'
-      )}/zone/${zone}/project/${projectId}/build/${buildId}/output/output.pdf`
+      `${compileDomainOrigin}/zone/${zone}/project/${projectId}/build/${buildId}/output/output.pdf`
     )
   }
 
@@ -198,34 +192,47 @@ export async function checkUserContentDomainAccess() {
   }
 
   let failed = 0
+  let ignoreResult = false
   const epochBeforeCheck = networkEpoch
-  for (const { url, init, estimatedSize, hash, chunks } of cases) {
-    await sleep(DELAY_BETWEEN_PROBES_MS)
+  await Promise.all(
+    cases.map(async ({ url, init, estimatedSize, hash, chunks }) => {
+      try {
+        await singleCheck(url, init, estimatedSize, hash, chunks)
+      } catch (err: any) {
+        if (!navigator.onLine || epochBeforeCheck !== networkEpoch) {
+          // It is very likely that the request failed because we are offline or
+          //  the network connection changed just now.
+          ignoreResult = true
+        }
+        if (ignoreResult) return
 
-    try {
-      await singleCheck(url, init, estimatedSize, hash, chunks)
-    } catch (err: any) {
-      if (!navigator.onLine || epochBeforeCheck !== networkEpoch) {
-        // It is very likely that the request failed because we are offline or
-        //  the network connection changed just now.
-        return false
+        failed++
+        OError.tag(err, 'user-content-domain-access-check failed', {
+          url,
+          init,
+        })
+        if (
+          isSplitTestEnabled('report-user-content-domain-access-check-error')
+        ) {
+          captureException(err, {
+            tags: { compileDomain: new URL(compileDomainOrigin).hostname },
+          })
+        } else {
+          console.error(OError.getFullStack(err), OError.getFullInfo(err))
+        }
       }
-      failed++
-      OError.tag(err, 'user-content-domain-access-check failed', {
-        url,
-        init,
-      })
-      if (isSplitTestEnabled('report-user-content-domain-access-check-error')) {
-        captureException(err)
-      } else {
-        console.error(OError.getFullStack(err), OError.getFullInfo(err))
-      }
-    }
-  }
+    })
+  )
+  if (ignoreResult) return false
 
   try {
     await postJSON('/record-user-content-domain-access-check-result', {
-      body: { failed, succeeded: cases.length - failed },
+      body: {
+        failed,
+        succeeded: cases.length - failed,
+        isOldDomain:
+          compileDomainOrigin === getMeta('ol-fallbackCompileDomain'),
+      },
     })
   } catch (e) {}
 
@@ -276,8 +283,16 @@ export function scheduleUserContentDomainAccessCheck() {
       return scheduleUserContentDomainAccessCheck()
     }
     if (accessCheckPassed) return
+    if (remainingChecks === 0) {
+      recordMaxAccessChecksHit()
+    }
     if (remainingChecks-- <= 0) return
-    checkUserContentDomainAccess()
+    if (isSplitTestEnabled('access-check-for-old-compile-domain')) {
+      checkUserContentDomainAccess(getMeta('ol-fallbackCompileDomain')).catch(
+        () => {}
+      )
+    }
+    checkUserContentDomainAccess(getMeta('ol-compilesUserContentDomain'))
       .then(ok => {
         accessCheckPassed = ok
       })
@@ -285,4 +300,8 @@ export function scheduleUserContentDomainAccessCheck() {
         captureException(err)
       })
   }, INITIAL_DELAY_MS)
+}
+
+function recordMaxAccessChecksHit() {
+  postJSON('/record-user-content-domain-max-access-checks-hit').catch(() => {})
 }

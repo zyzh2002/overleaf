@@ -237,8 +237,11 @@ aside#left-menu.full-size(
 				new-source-editor="editor.newSourceEditor"
 			)
 		if showSupport
-			li
-				a(href='/learn', target="_blank")
+			li(ng-controller="LeftMenuDocumentationController")
+				a(
+					href='/learn', target="_blank"
+					ng-click="sendLeftMenuDocumentationEvent()"
+				)
 					i.fa.fa-book.fa-fw
 					| &nbsp;&nbsp; #{translate('documentation')}
 			li

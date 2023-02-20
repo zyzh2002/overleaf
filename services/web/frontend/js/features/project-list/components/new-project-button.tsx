@@ -8,6 +8,7 @@ import getMeta from '../../../utils/meta'
 import NewProjectButtonModal, {
   NewProjectButtonModalVariant,
 } from './new-project-button/new-project-button-modal'
+import AddAffiliation, { useAddAffiliation } from './add-affiliation'
 import { Nullable } from '../../../../../types/utils'
 import { sendMB } from '../../../infrastructure/event-tracking'
 
@@ -30,20 +31,25 @@ type NewProjectButtonProps = {
   id: string
   buttonText?: string
   className?: string
+  menuClassName?: string
   trackingKey?: string
+  showAddAffiliationWidget?: boolean
 }
 
 function NewProjectButton({
   id,
   buttonText,
   className,
+  menuClassName,
   trackingKey,
+  showAddAffiliationWidget,
 }: NewProjectButtonProps) {
   const { t } = useTranslation()
   const { templateLinks } = getMeta('ol-ExposedSettings') as ExposedSettings
   const [modal, setModal] =
     useState<Nullable<NewProjectButtonModalVariant>>(null)
   const portalTemplates = getMeta('ol-portalTemplates') as PortalTemplate[]
+  const { show: enableAddAffiliationWidget } = useAddAffiliation()
 
   const sendTrackingEvent = useCallback(
     ({
@@ -146,7 +152,7 @@ function NewProjectButton({
         >
           {buttonText || t('new_project')}
         </Dropdown.Toggle>
-        <Dropdown.Menu>
+        <Dropdown.Menu className={menuClassName}>
           <MenuItem
             onClick={e =>
               handleModalMenuClick(e, {
@@ -221,6 +227,14 @@ function NewProjectButton({
                 : templateLink.name}
             </MenuItem>
           ))}
+          {showAddAffiliationWidget && enableAddAffiliationWidget ? (
+            <>
+              <MenuItem divider />
+              <li className="add-affiliation-mobile-wrapper">
+                <AddAffiliation className="is-mobile" />
+              </li>
+            </>
+          ) : null}
         </Dropdown.Menu>
       </ControlledDropdown>
       <NewProjectButtonModal modal={modal} onHide={() => setModal(null)} />

@@ -15,6 +15,7 @@ import CompanyDetails from './company-details'
 import CouponCode from './coupon-code'
 import TosAgreementNotice from './tos-agreement-notice'
 import SubmitButton from './submit-button'
+import ThreeDSecure from './three-d-secure'
 import getMeta from '../../../../../utils/meta'
 import { postJSON } from '../../../../../infrastructure/fetch-json'
 import * as eventTracking from '../../../../../infrastructure/event-tracking'
@@ -33,7 +34,8 @@ function CheckoutPanel() {
   const { t } = useTranslation()
   const {
     couponError,
-    plan,
+    planCode,
+    planName,
     pricingFormState,
     pricing,
     recurlyLoadError,
@@ -149,7 +151,7 @@ function CheckoutPanel() {
           eventTracking.send(
             'subscription-funnel',
             'subscription-submission-success',
-            plan.planCode
+            planCode
           )
           window.location.assign('/user/subscription/thank-you')
         } catch (error) {
@@ -172,7 +174,7 @@ function CheckoutPanel() {
       ITMReferrer,
       isAddCompanyDetailsChecked,
       isPayPalPaymentMethod,
-      plan.planCode,
+      planCode,
       pricing,
       pricingFormState,
       t,
@@ -183,7 +185,7 @@ function CheckoutPanel() {
 
   useEffect(() => {
     payPal.current = recurly.PayPal({
-      display: { displayName: plan.name },
+      display: { displayName: planName },
     })
 
     payPal.current.on('token', token => {
@@ -201,7 +203,7 @@ function CheckoutPanel() {
     return () => {
       payPalCopy.destroy()
     }
-  }, [completeSubscription, plan.name])
+  }, [completeSubscription, planName])
 
   const handleCardChange = useCallback((state: CardElementChangeState) => {
     setCardIsValid(state.valid)
@@ -213,6 +215,22 @@ function CheckoutPanel() {
         <strong>{t('payment_provider_unreachable_error')}</strong>
       </Alert>
     )
+  }
+
+  const handleThreeDToken = (token: TokenPayload) => {
+    // on SCA verification success: show payment UI in processing mode and
+    // resubmit the payment with the new token final success or error will be
+    // handled by `completeSubscription`
+    completeSubscription(null, undefined, token)
+    setGenericError('')
+    setThreeDSecureActionTokenId(undefined)
+    setIsProcessing(true)
+  }
+
+  const handleThreeDError = (error: RecurlyError) => {
+    // on SCA verification error: show payment UI with the error message
+    setGenericError(`Error: ${error.message}`)
+    setThreeDSecureActionTokenId(undefined)
   }
 
   const handlePaymentMethod = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -265,9 +283,16 @@ function CheckoutPanel() {
 
   return (
     <>
+      {threeDSecureActionTokenId && (
+        <ThreeDSecure
+          actionTokenId={threeDSecureActionTokenId}
+          onToken={handleThreeDToken}
+          onError={handleThreeDError}
+        />
+      )}
       <div className={classnames({ hidden: threeDSecureActionTokenId })}>
         <PriceSwitchHeader
-          planCode={plan.planCode}
+          planCode={planCode}
           planCodes={[
             'student-annual',
             'student-monthly',

@@ -56,6 +56,14 @@ const overrides = {
 
   // Disable contentful module.
   contentful: undefined,
+
+  twoFactorAuthentication: {
+    accessTokenEncryptorOptions: {
+      cipherPasswords: {
+        '2023.1-v3': 'this-is-a-weak-secret-for-tests-web-2023.1-v3',
+      },
+    },
+  },
 }
 
 module.exports = baseApp.mergeWith(baseTest.mergeWith(overrides))

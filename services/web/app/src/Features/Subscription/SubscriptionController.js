@@ -186,6 +186,7 @@ async function _paymentReactPage(req, res) {
         currency,
         countryCode,
         plan,
+        planCode: req.query.planCode,
         couponCode: req.query.cc,
         showCouponField: !!req.query.scf,
         itm_campaign: req.query.itm_campaign,
@@ -311,9 +312,10 @@ async function _userSubscriptionReactPage(req, res) {
   const hasSubscription =
     await LimitationsManager.promises.userHasV1OrV2Subscription(user)
   const fromPlansPage = req.query.hasSubscription
-  const plans = SubscriptionViewModelBuilder.buildPlansList(
-    personalSubscription ? personalSubscription.plan : undefined
-  )
+  const plansData =
+    SubscriptionViewModelBuilder.buildPlansListForSubscriptionDash(
+      personalSubscription?.plan
+    )
 
   AnalyticsManager.recordEventForSession(req.session, 'subscription-page-view')
 
@@ -327,7 +329,8 @@ async function _userSubscriptionReactPage(req, res) {
 
   const data = {
     title: 'your_subscription',
-    plans,
+    plans: plansData?.plans,
+    planCodesChangingAtTermEnd: plansData?.planCodesChangingAtTermEnd,
     groupPlans: GroupPlansData,
     user,
     hasSubscription,
