@@ -88,12 +88,10 @@ module.exports = {
   mongo: {
     options: {
       appname: 'web',
-      useUnifiedTopology:
-        (process.env.MONGO_USE_UNIFIED_TOPOLOGY || 'true') === 'true',
-      poolSize: parseInt(process.env.MONGO_POOL_SIZE, 10) || 10,
+      maxPoolSize: parseInt(process.env.MONGO_POOL_SIZE, 10) || 100,
       serverSelectionTimeoutMS:
         parseInt(process.env.MONGO_SERVER_SELECTION_TIMEOUT, 10) || 60000,
-      socketTimeoutMS: parseInt(process.env.MONGO_SOCKET_TIMEOUT, 10) || 30000,
+      socketTimeoutMS: parseInt(process.env.MONGO_SOCKET_TIMEOUT, 10) || 60000,
     },
     url:
       process.env.MONGO_CONNECTION_STRING ||
@@ -205,6 +203,12 @@ module.exports = {
       // url: "http://#{process.env['CLSI_LB_HOST']}:3014"
       backendGroupName: undefined,
       defaultBackendClass: process.env.CLSI_DEFAULT_BACKEND_CLASS || 'e2',
+    },
+    project_history: {
+      sendProjectStructureOps: true,
+      initializeHistoryForNewProjects: true,
+      displayHistoryForNewProjects: true,
+      url: `http://${process.env.PROJECT_HISTORY_HOST || 'localhost'}:3054`,
     },
     realTime: {
       url: `http://${process.env.REALTIME_HOST || 'localhost'}:3026`,
@@ -788,6 +792,7 @@ module.exports = {
     integrationLinkingWidgets: [],
     referenceLinkingWidgets: [],
     importProjectFromGithubModalWrapper: [],
+    importProjectFromGithubMenu: [],
     editorLeftMenuSync: [],
   },
 

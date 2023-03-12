@@ -1,5 +1,6 @@
 const mongoose = require('mongoose')
 const Settings = require('@overleaf/settings')
+const Metrics = require('@overleaf/metrics')
 const logger = require('@overleaf/logger')
 const { addConnectionDrainer } = require('./GracefulShutdown')
 
@@ -12,20 +13,18 @@ if (
   )
 }
 
+mongoose.set('autoIndex', false)
+mongoose.set('strictQuery', false)
+
 const connectionPromise = mongoose.connect(
   Settings.mongo.url,
-  Object.assign(
-    {
-      // mongoose specific config
-      config: { autoIndex: false },
-      // mongoose defaults to false, native driver defaults to true
-      useNewUrlParser: true,
-      // use the equivalent `findOneAndUpdate` methods of the native driver
-      useFindAndModify: false,
-    },
-    Settings.mongo.options
-  )
+  Settings.mongo.options
 )
+
+connectionPromise.then(mongooseInstance => {
+  Metrics.mongodb.monitor(mongooseInstance.connection.client)
+})
+
 addConnectionDrainer('mongoose', async () => {
   await connectionPromise
   await mongoose.disconnect()

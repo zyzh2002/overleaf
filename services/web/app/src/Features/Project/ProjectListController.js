@@ -17,10 +17,10 @@ const NotificationsHandler = require('../Notifications/NotificationsHandler')
 const Modules = require('../../infrastructure/Modules')
 const { OError, V1ConnectionError } = require('../Errors/Errors')
 const { User } = require('../../models/User')
-const SplitTestHandler = require('../SplitTests/SplitTestHandler')
 const UserPrimaryEmailCheckHandler = require('../User/UserPrimaryEmailCheckHandler')
 const UserController = require('../User/UserController')
 const LimitationsManager = require('../Subscription/LimitationsManager')
+const NotificationsBuilder = require('../Notifications/NotificationsBuilder')
 
 /** @typedef {import("./types").GetProjectsRequest} GetProjectsRequest */
 /** @typedef {import("./types").GetProjectsResponse} GetProjectsResponse */
@@ -82,7 +82,7 @@ const _buildPortalTemplatesList = affiliations => {
  * @param {import("express").NextFunction} next
  * @returns {Promise<void>}
  */
-async function projectListReactPage(req, res, next) {
+async function projectListPage(req, res, next) {
   // can have two values:
   // - undefined - when there's no "saas" feature or couldn't get subscription data
   // - object - the subscription data object
@@ -262,33 +262,21 @@ async function projectListReactPage(req, res, next) {
     delete req.session.saml
   }
 
+  function fakeDelay() {
+    return new Promise(resolve => {
+      setTimeout(() => resolve(undefined), 0)
+    })
+  }
+
   const prefetchedProjectsBlob = await Promise.race([
     projectsBlobPending,
-    Promise.resolve(undefined),
+    fakeDelay(),
   ])
   Metrics.inc('project-list-prefetch-projects', 1, {
     status: prefetchedProjectsBlob ? 'success' : 'too-slow',
   })
 
-  let showGroupsAndEnterpriseBanner = false
-  let groupsAndEnterpriseBannerAssignment
-
-  try {
-    groupsAndEnterpriseBannerAssignment =
-      await SplitTestHandler.promises.getAssignment(
-        req,
-        res,
-        'groups-and-enterprise-banner'
-      )
-  } catch (error) {
-    logger.error(
-      { err: error },
-      'failed to get "groups-and-enterprise-banner" split test assignment'
-    )
-  }
-
   let userIsMemberOfGroupSubscription = false
-
   try {
     const userIsMemberOfGroupSubscriptionPromise =
       await LimitationsManager.promises.userIsMemberOfGroupSubscription(user)
@@ -302,15 +290,32 @@ async function projectListReactPage(req, res, next) {
     )
   }
 
+  // in v2 add notifications for matching university IPs
+  if (Settings.overleaf != null && req.ip !== user.lastLoginIp) {
+    try {
+      await NotificationsBuilder.promises
+        .ipMatcherAffiliation(user._id)
+        .create(req.ip)
+    } catch (err) {
+      logger.error(
+        { err },
+        'failed to create institutional IP match notification'
+      )
+    }
+  }
+
   const hasPaidAffiliation = userAffiliations.some(
     affiliation => affiliation.licence && affiliation.licence !== 'free'
   )
 
-  showGroupsAndEnterpriseBanner =
-    (groupsAndEnterpriseBannerAssignment?.variant ?? 'default') !== 'default' &&
+  const showGroupsAndEnterpriseBanner =
     Features.hasFeature('saas') &&
     !userIsMemberOfGroupSubscription &&
     !hasPaidAffiliation
+
+  const groupsAndEnterpriseBannerVariant =
+    showGroupsAndEnterpriseBanner &&
+    _.sample(['did-you-know', 'on-premise', 'people', 'FOMO'])
 
   res.render('project/list-react', {
     title: 'your_projects',
@@ -327,8 +332,7 @@ async function projectListReactPage(req, res, next) {
     portalTemplates,
     prefetchedProjectsBlob,
     showGroupsAndEnterpriseBanner,
-    groupsAndEnterpriseBannerVariant:
-      groupsAndEnterpriseBannerAssignment?.variant ?? 'default',
+    groupsAndEnterpriseBannerVariant,
     projectDashboardReact: true, // used in navbar
   })
 }
@@ -604,6 +608,6 @@ function _hasActiveFilter(filters) {
 }
 
 module.exports = {
-  projectListReactPage: expressify(projectListReactPage),
+  projectListPage: expressify(projectListPage),
   getProjectsJson: expressify(getProjectsJson),
 }

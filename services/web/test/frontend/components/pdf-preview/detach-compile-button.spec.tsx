@@ -1,11 +1,11 @@
 import { EditorProviders } from '../../helpers/editor-providers'
-import DetachCompileButton from '../../../../frontend/js/features/pdf-preview/components/detach-compile-button'
+import DetachCompileButtonWrapper from '../../../../frontend/js/features/pdf-preview/components/detach-compile-button-wrapper'
 import { mockScope } from './scope'
 import { testDetachChannel } from '../../helpers/detach-channel'
 
-describe('<DetachCompileButton/>', function () {
+describe('<DetachCompileButtonWrapper />', function () {
   beforeEach(function () {
-    cy.interceptCompile()
+    window.metaAttributesCache = new Map()
     cy.interceptEvents()
   })
 
@@ -14,6 +14,8 @@ describe('<DetachCompileButton/>', function () {
   })
 
   it('detacher mode and not linked: does not show button ', function () {
+    cy.interceptCompile()
+
     cy.window().then(win => {
       win.metaAttributesCache = new Map([['ol-detachRole', 'detacher']])
     })
@@ -22,14 +24,18 @@ describe('<DetachCompileButton/>', function () {
 
     cy.mount(
       <EditorProviders scope={scope}>
-        <DetachCompileButton />
+        <DetachCompileButtonWrapper />
       </EditorProviders>
     )
+
+    cy.waitForCompile()
 
     cy.findByRole('button', { name: 'Recompile' }).should('not.exist')
   })
 
   it('detacher mode and linked: show button', function () {
+    cy.interceptCompile()
+
     cy.window().then(win => {
       win.metaAttributesCache = new Map([['ol-detachRole', 'detacher']])
     })
@@ -38,9 +44,11 @@ describe('<DetachCompileButton/>', function () {
 
     cy.mount(
       <EditorProviders scope={scope}>
-        <DetachCompileButton />
+        <DetachCompileButtonWrapper />
       </EditorProviders>
     )
+
+    cy.waitForCompile()
 
     cy.wrap(null).then(() => {
       testDetachChannel.postMessage({
@@ -53,6 +61,8 @@ describe('<DetachCompileButton/>', function () {
   })
 
   it('not detacher mode and linked: does not show button ', function () {
+    cy.interceptCompile()
+
     cy.window().then(win => {
       win.metaAttributesCache = new Map([['ol-detachRole', 'detached']])
     })
@@ -61,9 +71,11 @@ describe('<DetachCompileButton/>', function () {
 
     cy.mount(
       <EditorProviders scope={scope}>
-        <DetachCompileButton />
+        <DetachCompileButtonWrapper />
       </EditorProviders>
     )
+
+    cy.waitForCompile()
 
     cy.wrap(null).then(() => {
       testDetachChannel.postMessage({

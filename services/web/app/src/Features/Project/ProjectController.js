@@ -43,8 +43,6 @@ const { hasAdminAccess } = require('../Helpers/AdminAuthorizationHelper')
 const InstitutionsFeatures = require('../Institutions/InstitutionsFeatures')
 const SubscriptionViewModelBuilder = require('../Subscription/SubscriptionViewModelBuilder')
 const SurveyHandler = require('../Survey/SurveyHandler')
-const { expressify } = require('../../util/promises')
-const ProjectListController = require('./ProjectListController')
 const ProjectAuditLogHandler = require('./ProjectAuditLogHandler')
 const PublicAccessLevels = require('../Authorization/PublicAccessLevels')
 
@@ -200,9 +198,9 @@ const ProjectController = {
 
     ProjectDeleter.archiveProject(projectId, userId, function (err) {
       if (err != null) {
-        return next(err)
+        next(err)
       } else {
-        return res.sendStatus(200)
+        res.sendStatus(200)
       }
     })
   },
@@ -213,9 +211,9 @@ const ProjectController = {
 
     ProjectDeleter.unarchiveProject(projectId, userId, function (err) {
       if (err != null) {
-        return next(err)
+        next(err)
       } else {
-        return res.sendStatus(200)
+        res.sendStatus(200)
       }
     })
   },
@@ -226,9 +224,9 @@ const ProjectController = {
 
     ProjectDeleter.trashProject(projectId, userId, function (err) {
       if (err != null) {
-        return next(err)
+        next(err)
       } else {
-        return res.sendStatus(200)
+        res.sendStatus(200)
       }
     })
   },
@@ -239,9 +237,9 @@ const ProjectController = {
 
     ProjectDeleter.untrashProject(projectId, userId, function (err) {
       if (err != null) {
-        return next(err)
+        next(err)
       } else {
-        return res.sendStatus(200)
+        res.sendStatus(200)
       }
     })
   },
@@ -408,28 +406,7 @@ const ProjectController = {
     })
   },
 
-  async projectListPage(req, res, next) {
-    try {
-      const assignment = await SplitTestHandler.promises.getAssignment(
-        req,
-        res,
-        'project-dashboard-react'
-      )
-      if (assignment.variant === 'enabled') {
-        ProjectListController.projectListReactPage(req, res, next)
-      } else {
-        ProjectController._projectListAngularPage(req, res, next)
-      }
-    } catch (error) {
-      logger.warn(
-        { err: error },
-        'failed to get "project-dashboard-react" split test assignment'
-      )
-      ProjectController._projectListAngularPage(req, res, next)
-    }
-  },
-
-  _projectListAngularPage(req, res, next) {
+  projectListPage(req, res, next) {
     const timer = new metrics.Timer('project-list')
     const userId = SessionManager.getLoggedInUserId(req.session)
     const currentUser = SessionManager.getSessionUser(req.session)
@@ -490,7 +467,7 @@ const ProjectController = {
                 // and does async.series
                 const allInReconfirmNotificationPeriods =
                   (results && results[0]) || []
-                return cb(null, {
+                cb(null, {
                   list: fullEmails,
                   allInReconfirmNotificationPeriods,
                 })
@@ -532,26 +509,6 @@ const ProjectController = {
             }
           )
         },
-        groupsAndEnterpriseBannerAssignment(cb) {
-          SplitTestHandler.getAssignment(
-            req,
-            res,
-            'groups-and-enterprise-banner',
-            (err, assignment) => {
-              if (err) {
-                logger.warn(
-                  { err },
-                  'failed to get "groups-and-enterprise-banner" split test assignment'
-                )
-
-                const defaultAssignment = { variant: 'default' }
-                cb(null, defaultAssignment)
-              } else {
-                cb(null, assignment)
-              }
-            }
-          )
-        },
         survey(cb) {
           SurveyHandler.getSurvey(userId, (err, survey) => {
             if (err) {
@@ -573,7 +530,6 @@ const ProjectController = {
           notifications,
           user,
           userEmailsData,
-          groupsAndEnterpriseBannerAssignment,
           userIsMemberOfGroupSubscription,
         } = results
 
@@ -707,12 +663,14 @@ const ProjectController = {
           affiliation => affiliation.licence && affiliation.licence !== 'free'
         )
 
-        // groupsAndEnterpriseBannerAssignment.variant = 'default' | 'empower' | 'save' | 'did-you-know'
         const showGroupsAndEnterpriseBanner =
-          groupsAndEnterpriseBannerAssignment.variant !== 'default' &&
           Features.hasFeature('saas') &&
           !userIsMemberOfGroupSubscription &&
           !hasPaidAffiliation
+
+        const groupsAndEnterpriseBannerVariant =
+          showGroupsAndEnterpriseBanner &&
+          _.sample(['did-you-know', 'on-premise', 'people', 'FOMO'])
 
         ProjectController._injectProjectUsers(projects, (error, projects) => {
           if (error != null) {
@@ -739,8 +697,7 @@ const ProjectController = {
             usersBestSubscription: results.usersBestSubscription,
             survey: results.survey,
             showGroupsAndEnterpriseBanner,
-            groupsAndEnterpriseBannerVariant:
-              groupsAndEnterpriseBannerAssignment.variant,
+            groupsAndEnterpriseBannerVariant,
           }
 
           const paidUser =
@@ -1081,6 +1038,21 @@ const ProjectController = {
             }
           )
         },
+        onboardingVideoTourAssignment(cb) {
+          SplitTestHandler.getAssignment(
+            req,
+            res,
+            'onboarding-video-tour',
+            (error, assignment) => {
+              // do not fail editor load if assignment fails
+              if (error) {
+                cb(null, { variant: 'default' })
+              } else {
+                cb(null, assignment)
+              }
+            }
+          )
+        },
         accessCheckForOldCompileDomainAssigment(cb) {
           SplitTestHandler.getAssignment(
             req,
@@ -1153,6 +1125,7 @@ const ProjectController = {
           pdfjsAssignment,
           editorLeftMenuAssignment,
           richTextAssignment,
+          onboardingVideoTourAssignment,
         }
       ) => {
         if (err != null) {
@@ -1260,6 +1233,12 @@ const ProjectController = {
               !userIsMemberOfGroupSubscription &&
               !userHasInstitutionLicence
 
+            const showOnboardingVideoTour =
+              Features.hasFeature('saas') &&
+              userId &&
+              onboardingVideoTourAssignment.variant === 'active' &&
+              req.session.justRegistered
+
             const template =
               detachRole === 'detached'
                 ? 'project/editor_detached'
@@ -1338,6 +1317,7 @@ const ProjectController = {
               useOpenTelemetry: Settings.useOpenTelemetryClient,
               showCM6SwitchAwaySurvey: Settings.showCM6SwitchAwaySurvey,
               richTextVariant: richTextAssignment.variant,
+              showOnboardingVideoTour,
             })
             timer.done()
           }
@@ -1394,7 +1374,7 @@ const ProjectController = {
             status: 'success',
           })
         }
-        return callback(null, user)
+        callback(null, user)
       }
     )
   },
@@ -1633,9 +1613,5 @@ const LEGACY_THEME_LIST = [
   'vibrant_ink',
   'xcode',
 ]
-
-ProjectController.projectListPage = expressify(
-  ProjectController.projectListPage
-)
 
 module.exports = ProjectController

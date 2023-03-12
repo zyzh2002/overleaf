@@ -36,8 +36,11 @@ const initialize = () => {
       {
         _id: 'root-folder-id',
         name: 'rootFolder',
-        docs: [],
-        fileRefs: [],
+        docs: [
+          { _id: 'test-file-id', name: 'testfile.tex' },
+          { _id: 'test-bib-file-id', name: 'testsources.bib' },
+        ],
+        fileRefs: [{ _id: 'test-image-id', name: 'frog.jpg' }],
         folders: [],
       },
     ],
@@ -63,7 +66,7 @@ const initialize = () => {
     $broadcast: () => {},
     $root: {
       _references: {
-        keys: [],
+        keys: ['bibkeyExample'],
       },
     },
     ui: {
@@ -98,7 +101,13 @@ const initialize = () => {
       findEntityByPath: () => null,
       getEntityPath: () => null,
       getRootDocDirname: () => undefined,
-      getPreviewByPath: () => null,
+      getPreviewByPath: (path: string) =>
+        path === 'frog.jpg'
+          ? {
+              extension: 'png',
+              url: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAYAAAB5fY51AAABhWlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1Iw0AcxV9TpaJVETuIOGSogmBBVMRRq1CECqFWaNXB5NIvaNKQpLg4Cq4FBz8Wqw4uzro6uAqC4AeIq4uToouU+L+k0CLWg+N+vLv3uHsHCNUi06y2cUDTbTMRi4qp9KoYeIWAPnShB6Mys4w5SYqj5fi6h4+vdxGe1frcn6NbzVgM8InEs8wwbeIN4ulN2+C8TxxieVklPiceM+mCxI9cVzx+45xzWeCZITOZmCcOEYu5JlaamOVNjXiKOKxqOuULKY9VzluctWKZ1e/JXxjM6CvLXKc5hBgWsQQJIhSUUUARNiK06qRYSNB+tIV/0PVL5FLIVQAjxwJK0CC7fvA/+N2tlZ2c8JKCUaD9xXE+hoHALlCrOM73sePUTgD/M3ClN/ylKjDzSXqloYWPgN5t4OK6oSl7wOUOMPBkyKbsSn6aQjYLvJ/RN6WB/lugc83rrb6P0wcgSV3Fb4CDQ2AkR9nrLd7d0dzbv2fq/f0ARfNylZJUgMQAAAAGYktHRABuAP8AAGHZRr4AAAAJcEhZcwAALiMAAC4jAXilP3YAAAAHdElNRQfnAhELEhgyPeVkAAAAGXRFWHRDb21tZW50AENyZWF0ZWQgd2l0aCBHSU1QV4EOFwAAAyVJREFUeNrt1rEJgDAURVGVNCmS2hS6PziCteIYWjuEbiEfOWeEV1xe35bt6QhjnlYjBJLzbYRABhMAggUgWIBgAQgWgGABggUgWACCBQgWgGABCBYgWACCBSBYgGABCBaAYAGCBSBYAIIFCBaAYAEIFiBYAIIFIFiAYAEIFiBYAIIFIFiAYAEIFoBgAYIFIFgAggUIFoBgAQgWIFgAggUgWIBgAQgWgGABggUgWACCBQgWgGABCBYgWACCBSBYgGABCBYgWACCBSBYgGABCBaAYAGCBSBYAIIFCBaAYAEIFiBYAIIFIFiAYAEIFoBgAYIFIFgAggUIFoBgAQgWIFgAggUgWIBgAQgWIFgAggUgWIBgAQgWgGABggUgWACCBQgWgGABCBbwX6m13QqB5HwbIZBSLyN4WACCBQgWgGABCBYgWACCBSBYgGABCBaAYAGCBSBYAIIFCBaAYAEIFiBYAIIFCBaAYAEIFiBYAIIFIFiAYAEIFoBgAYIFIFgAggUIFoBgAQgWIFgAggUgWIBgAQgWgGABggUgWACCBQgWgGABCBYgWACCBQgWgGABCBYgWACCBSBYgGABCBaAYAGCBSBYAIIFCBaAYAEIFiBYAIIFIFiAYAEIFoBgAYIFIFgAggUIFoBgAQgWIFgAggUIFoBgAQgWIFgAggUgWIBgAQgWgGABggUgWACCBQgWgGABCBYgWACCBSBYgGABCBaAYAGCBfCFVMtphUBKvYwQSBsPI3hYAIIFCBaAYAEIFiBYAIIFIFiAYAEIFoBgAYIFIFgAggUIFoBgAQgWIFgAggUIFoBgAQgWIFgAggUgWIBgAQgWgGABggUgWACCBQgWgGABCBYgWACCBSBYgGABCBaAYAGCBSBYAIIFCBaAYAEIFiBYAIIFCBaAYAEIFiBYAIIFIFiAYAEIFoBgAYIFIFgAggUIFoBgAQgWIFgAggUgWIBgAQgWgGABggUgWACCBQgWgGABCBYgWACCBQgWgGABCBYgWACCBSBYgGABCBaAYAGCBSBYAIIFCBaAYAEIFiBYAIIFIFiAYAEIFoBgAYIF8IUXjtUMuBMh1xAAAAAASUVORK5CYII=',
+            }
+          : null,
     },
     editorManager: {
       getCurrentDocId: () => 'foo',
@@ -109,7 +118,9 @@ const initialize = () => {
     metadataManager: {
       metadata: {
         state: {
-          documents: {},
+          documents: {
+            'test-file-id': { labels: ['sec:section-label'], packages: [] },
+          },
         },
       },
     },
@@ -118,6 +129,7 @@ const initialize = () => {
   window.user = user
 
   window.ExposedSettings = {
+    adminEmail: 'placeholder@example.com',
     appName: 'Overleaf',
     cookieDomain: '.overleaf.stories',
     dropboxAppName: 'Overleaf-Stories',
